@@ -11,6 +11,8 @@
     "HTML",
     "preprocessor"
   ],
+  "homepage": "https://github.com/soulshined/fthtml",
+  "repository" : "https://github.com/soulshined/fthtml",
   "author": "David Freer <davidfreer@me.com> (https://davidfreer.me)",
-  "license": "Apache-2.0"
+  "license": "GPL-3.0-or-later"
 }
