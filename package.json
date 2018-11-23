@@ -1,6 +1,6 @@
 {
   "name": "fthtml",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "An HTML preprocesser built to cut down on special characters/tags and typing. Incorporates importing other .ftHTML files",
   "main": "index.js",
   "scripts": {

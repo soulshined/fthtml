@@ -51,10 +51,7 @@
           i = i + 1;
         }
         if (e.type === 'String' && isChildIteration) {
-          console.log(e.value);
-
           let peek = this.peek(i);
-
           if (peek !== undefined && peek.value !== '+') {
             throw new Error(`Expecting a '+' symbol @ ${peek.line}:${peek.pos}`);
           }
