@@ -1,7 +1,5 @@
 This is a personal package created to simplify regular HTML markup and get rid of all the unnecessary typing needed for tags, selectors and special characters. More importantly this was practice for myself to get introduced into lexical analysis, parsing tokens and ASTs.
 
-This preprocessor is not in final form, Parsing Error Handling for example is extremely weak as it stands now. However, provided you have a syntactically well formed ftHTML file per ftHTML standards, it will translate accordingly just fine.  
-
 This was made specifically with node.js in mind.
 
 __Turn this:__
@@ -85,59 +83,11 @@ ftHTML.renderFile('filename');
 
 - `.fthtml` extn is intended to be omitted.
 - `.renderFile()` returns the interpreted HTML syntax
+- Alternatively, you can just compile text with ftHTML.compile(text) if you don't want to use a file
 
 # File Format Rules
 
-The .fthtml file is expected to be formatted with one element (identifier + body) or one parent element, with many children elements. The following demonstrates:
-
-#### Good Form
-```
-main 
-{
-  "This is the main content"
-}
-```
-or
-```
-main 
-{
-  section 
-  {
-    ...
-  }
-  section
-  {
-    ...
-  }
-  section
-  {
-    ...
-  }
-  article 
-  {
-    ...
-  }
-}
-```
-#### Bad Form
-```
-header
-{
-  ...
-}
-main
-{
-  ...
-}
-footer 
-{
-  ...
-}
-```
-
-In other words, the file should be formed as such as there is only 1 parent per file. Otherwise you will recieve a generic AST error.
-
-The only exception is when you use doctype, the doctype keyword will always be used prior to first element of the file.
+The doctype keyword should always be used prior to first element of the file.
 
 The following is an example of a well formed ftHTML file:
 
@@ -159,7 +109,7 @@ div (#myDiv .firstDivClass .secondDivClass .thirdDivClass)
 }
 ```
 
-As shown below, the first parent element of the file doesn't need to be a traditional `<html>` tag, it can be any identifier, even custom ones, this is useful for when importing other files as templates (more on that later), but this illustrates it is indeed expecting one parent element. It can simply even be an element with a body & no children:
+As shown below, the first parent element of the file doesn't need to be a traditional `<html>` tag, it can be any identifier, even custom ones, this is useful for when importing other files as templates (more on that later). It can simply even be an element with a body & no children:
 
 ```
 body "Hello World"
@@ -170,8 +120,8 @@ body "Hello World"
 
 Notes: 
 - Attributes and selectors are always enclosed in a `(` `)` set
-- If you include an id, it is REQUIRED that the id be the first selector in the set. This is to ensure only 1 id is included for the element. All following selectors/attributes can be in any random order
-- There can ___not___ be an empty attribute set. In other words, `div()` is considered fatal, and simply `div` is recommended.
+- All selectors/attributes can be in any random order
+- If you include multiple id's in a single attribute set, an error will be thrown
 - If your attribute's value has spaces, wrap the value in quotations. 
 - The only special characters allowed are '.'(period), '-'(hypen), '_'(underscore) -- all cases where a special character other than that will be used it is recommened to wrap it in quotations (for example a relative path: `a(href='../../index.fthtml')`, classes and id's can not be wrapped in quotations
 
@@ -212,7 +162,7 @@ div (#id .class1 data-foo=bar .class2)
 ```
 
 ## Concating Elements
-When wanting to concatenate elements or child elements you must wrap them in `{ }` set. It will ___not___ prove fatal, however, they will become sibling elements instead of a single concatenated element.
+When wanting to concatenate elements or child elements you must wrap them in `{ }` set. Errors will be thrown when necessary to prevent ill-formed syntax.
 
 The following demonstrates:
 #### Good Form
@@ -229,8 +179,7 @@ p "Paragraph content  with an interpolated link " + a (href=index.html target=_b
 ```
 Produces:
 ```
-<p>Paragraph content with an interpolated link</p>
-<a href="index.html" target="_blank">here</a>
+Error: Elements can not start with symbols.
 ```
 
 > You can continue concatenating as long as concatenated elements are in a `{ }` set
@@ -249,13 +198,11 @@ Produces:
 <p>To go home click <a href="index.html" target="_blank">here</a> or to contact us click <a href="contact.fthtml" target="_blank">here</a></p>
 ```
 
-Without the concatenation symbol the elements will be siblings
-
 ## Importing files
 
 The idea behind importing files is for them to act like templates. For demonstration purposes lets use a navigation menu, which is usually found on every major page of your site. Instead of copying/pasting, you can create a file, let's say "header.fthtml", for demonstration, and import it inline using the keyword "import"
 
-I would test each file individually before doing this to ensure proper syntax, as the parsing error handling is weak as noted above. Until better error handling is implemented test each file before importing. 
+I would test each file individually before doing this to ensure proper syntax, as the parsing error handling does not take into account which file throws it at the moment. 
 
 Notes:
 - Import supports relative paths (ex: "../../header")

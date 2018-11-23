@@ -1,10 +1,10 @@
-(function() {
+(function () {
   const ftHTMLexer = {};
 
   ftHTMLexer.TokenType = (Object.freeze({
     Keyword: 'Keyword',
     Symbol: 'Symbol',
-    Word : 'Word',
+    Word: 'Word',
     String: 'String'
   }));
 
@@ -21,7 +21,7 @@
   });
 
   ftHTMLexer.LexMode = (Object.freeze({
-    Definition : 0,
+    Definition: 0,
     Directive: 1,
     LComment: 2,
     BComment: 3,
@@ -31,18 +31,18 @@
   ftHTMLexer.lexer = (class Lexer {
     constructor() {
       this.keywords = ['doctype', 'comment', 'import'];
-      this.symbols = ['{','}','(',')','=', '.', '+','#'];
+      this.symbols = ['{', '}', '(', ')', '=', '.', '+', '#'];
       // this.directives = ['region'];
     }
-    isValidChar(c) { 
-      return ((c >= 'a') && (c <= 'z') || ((c >= 'A') && (c <= 'Z')) || ((c >= '0') && (c <= '9')) || (c === '-') || (c==='_')); 
+    isValidChar(c) {
+      return ((c >= 'a') && (c <= 'z') || ((c >= 'A') && (c <= 'Z')) || ((c >= '0') && (c <= '9')) || (c === '-') || (c === '_'));
     }
     tokenize(source) {
       let tokens = new Array();
 
       //strip line comments from source, we will leave block comments in, in order to maintain accurate line, pos references (this is on todo list)
-      source = source.replace(/^[ ]*[\/]{2}.*$/gm,"");
-     
+      source = source.replace(/^[ ]*[\/]{2}.*$/gm, "");
+
       let mode = ftHTMLexer.LexMode.Definition;
       var buffer = "";
       let line = 1;
@@ -72,16 +72,16 @@
                 case '"':
                 case "'":
                   if (buffer.length > 0) {
-                    this.throwError(c,line,pos);
+                    this.throwError(c, line, pos);
                   }
                   buffer += c;
                   mode = ftHTMLexer.LexMode.String;
                   break;
                 default:
-                  if (c === ' ' || c === '\n' || this.symbols.includes(c)) {                    
+                  if (c === ' ' || c === '\n' || this.symbols.includes(c)) {
                     if (buffer.length > 0) {
                       if (c === '.') {
-                        buffer +=c;
+                        buffer += c;
                         break;
                       }
 
@@ -97,7 +97,7 @@
                   }
                   else {
                     if (!['\t', '\r'].includes(c)) {
-                        this.throwError(c, line, pos);
+                      this.throwError(c, line, pos);
                     }
                   }
                   break;
@@ -106,7 +106,6 @@
           }
           case ftHTMLexer.LexMode.Directive: {
             //not implemented yet
-
             //directives for regions, version checking etc
             break;
           }
@@ -129,7 +128,7 @@
             buffer += c;
             if (c === buffer.charAt(0)) {
               if ((!(buffer.endsWith("\\" + c))) != (buffer.endsWith("\\\\" + c))) {
-                tokens.push(new ftHTMLexer.Token(ftHTMLexer.TokenType.String, line, pos-buffer.length -1, buffer));
+                tokens.push(new ftHTMLexer.Token(ftHTMLexer.TokenType.String, line, pos - buffer.length + 1, buffer));
                 buffer = "";
                 mode = ftHTMLexer.LexMode.Definition;
               }
