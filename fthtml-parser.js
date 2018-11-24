@@ -13,19 +13,19 @@
       return parser.parse(lexer.tokenize(src));
     }
     renderFile(file) {
-      this.file = file;
       if (file.startsWith('https:') || file.startsWith('http:')) {
         throw new Error(`Import files must be local, can not access '${file}'`);
       }
+      console.log(`Rendering ${file}.fthtml`);
 
       try {
         if (fs.existsSync(`${file}.fthtml`)) {
-          var html = fs.readFileSync(`${file}.fthtml`, 'utf8');
+          let html = fs.readFileSync(`${file}.fthtml`, 'utf8');
           return this.compile(html);
         }
         else {
           console.warn(`Can not find file '${file}.fthtml' to import. File omitted`);
-          return;
+          return '';
         }
       } catch (err) {
         throw new Error(err);
@@ -43,7 +43,7 @@
 
         if (e.type === 'Symbol' && !['{', '}', '(', ')'].includes(e.value)) {
           if (isChildIteration && e.value === '+') continue;
-          throw new Error(`Elements can not start with symbols. Error at @ ${e.line}:${e.pos}`);
+          throw new Error(`Elements can not start with symbols. Error @ ${e.line}:${e.pos}`);
         }
 
         if (e.type === 'Keyword') {
@@ -121,7 +121,7 @@
     initElementWithAttrs(start, end) {
       let attrs = this.parseAttributes(start + 2, end);
       let innerHTML = '';
-      let peek = this.tokens[end + 1];
+      let peek = this.peek(end);
       let _thisEnd = end;
 
       if (peek !== undefined) {
@@ -203,7 +203,8 @@
       return `${id}${classes}${attrs}`;
     }
     parseString(value) {
-      return value.substring(1, value.length - 1);
+      return (value.substring(1, value.length - 1))
+        .split(`\\${value.charAt(0)}`).join(value.charAt(0));
     }
     findClosingSymbol(closing, start) {
       let { line, pos, value } = this.tokens[start];

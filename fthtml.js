@@ -4,16 +4,14 @@
   function makeftHTML() {
     return ({
       compile: function (src) {
-        let parser = new Parser.Parser;
-        return parser.compile(src);
+        return (new Parser.Parser).compile(src);
       },
       renderFile: function (file) {
-        console.time('parser');
-        let parser = new Parser.Parser;
-        return parser.renderFile(file);
+        return (new Parser.Parser).renderFile(file);
       }
     });
   }
+
   if (typeof module !== 'undefined' && 'exports' in module) {
     module.exports = makeftHTML();
   }

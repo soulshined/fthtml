@@ -1,4 +1,9 @@
-# v6.0
+# 0.6.2
+
+- Trivial Adjustments
+- Escaped strings support
+
+# 0.6.0
 
 - Removed the strict rules of file formats (you can now have as many parent elements as you wish)
 - Overhauled parsing (made it faster by using less iterations)
