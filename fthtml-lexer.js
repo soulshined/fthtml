@@ -3,9 +3,11 @@
 
   ftHTMLexer.TokenType = (Object.freeze({
     Keyword: 'Keyword',
+    Pragma: 'Pragma',
+    String: 'String',
     Symbol: 'Symbol',
-    Word: 'Word',
-    String: 'String'
+    Variable: 'Variable',
+    Word: 'Word'
   }));
 
   ftHTMLexer.Token = (class Token {
@@ -22,20 +24,24 @@
 
   ftHTMLexer.LexMode = (Object.freeze({
     Definition: 0,
-    Directive: 1,
-    LComment: 2,
-    BComment: 3,
-    String: 4
+    LComment: 1,
+    BComment: 2,
+    String: 3,
+    Variable: 4
   }));
 
-  ftHTMLexer.lexer = (class Lexer {
+  ftHTMLexer.Lexer = (class Lexer {
     constructor() {
-      this.keywords = ['doctype', 'comment', 'import'];
+      this.keywords = ['doctype', 'comment', 'import', 'end'];
       this.symbols = ['{', '}', '(', ')', '=', '.', '+', '#'];
-      // this.directives = ['region'];
+      this.stringSyms = ['"', "'"];
+      this.pragmas = ['vars'];
+    }
+    isValidLetter(c) {
+      return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
     }
     isValidChar(c) {
-      return ((c >= 'a') && (c <= 'z') || ((c >= 'A') && (c <= 'Z')) || ((c >= '0') && (c <= '9')) || (c === '-') || (c === '_'));
+      return (this.isValidLetter(c) || (c >= '0' && c <= '9') || c === '-' || c === '_');
     }
     tokenize(source) {
       let tokens = new Array();
@@ -48,7 +54,7 @@
       let line = 1;
       let pos = 1;
 
-      for (let c of source) {
+      for (let c of source + " ") {
         switch (mode) {
           case ftHTMLexer.LexMode.Definition: {
             if (this.isValidChar(c)) {
@@ -65,17 +71,21 @@
                   break;
                 case '*':
                   buffer += c;
-                  if (buffer.endsWith('/*')) {
-                    mode = ftHTMLexer.LexMode.BComment;
-                  }
+                  if (buffer.endsWith('/*')) mode = ftHTMLexer.LexMode.BComment;
+
                   break;
                 case '"':
                 case "'":
-                  if (buffer.length > 0) {
-                    this.throwError(c, line, pos);
-                  }
+                  if (buffer.length > 0) this.throwCharError(c, line, pos);
+
                   buffer += c;
                   mode = ftHTMLexer.LexMode.String;
+                  break;
+                case '@':
+                  if (buffer.length > 0) this.throwCharError(c, line, pos);
+
+                  buffer += c;
+                  mode = ftHTMLexer.LexMode.Variable;
                   break;
                 default:
                   if (c === ' ' || c === '\n' || this.symbols.includes(c)) {
@@ -85,28 +95,21 @@
                         break;
                       }
 
-                      let _tokenType = ftHTMLexer.TokenType.Keyword;
-                      if (!this.keywords.includes(buffer)) _tokenType = ftHTMLexer.TokenType.Word;
-                      tokens.push(new ftHTMLexer.Token(_tokenType, line, pos - buffer.length, buffer));
+                      if (buffer.length === 1 && ['/', '*'].includes(buffer)) this.throwCharError(buffer, line, pos - 1);
+                      tokens.push(new ftHTMLexer.Token(this.getTokenType(buffer), line, pos - buffer.length, buffer));
                       buffer = "";
                     }
-                    if (this.symbols.includes(c)) {
+                    if (this.symbols.includes(c))
                       tokens.push(new ftHTMLexer.Token(ftHTMLexer.TokenType.Symbol, line, pos, c));
-                    }
+
                     break;
                   }
                   else {
-                    if (!['\t', '\r'].includes(c)) {
-                      this.throwError(c, line, pos);
-                    }
+                    if (!['\t', '\r'].includes(c)) this.throwCharError(c, line, pos);
+                    continue;
                   }
-                  break;
               }
             }
-          }
-          case ftHTMLexer.LexMode.Directive: {
-            //not implemented yet
-            //directives for regions, version checking etc
             break;
           }
           case ftHTMLexer.LexMode.LComment: {
@@ -135,6 +138,27 @@
             }
             break;
           }
+          case ftHTMLexer.LexMode.Variable: {
+            if (c === ' ' || c === '\n') {
+              tokens.push(new ftHTMLexer.Token(ftHTMLexer.TokenType.Variable, line, pos - buffer.length, buffer));
+              mode = ftHTMLexer.LexMode.Definition;
+              buffer = "";
+            }
+            else {
+              if (!this.isValidChar(c)) {
+                if (this.symbols.includes(c)) {
+                  tokens.push(new ftHTMLexer.Token(ftHTMLexer.TokenType.Variable, line, pos - buffer.length, buffer));
+                  tokens.push(new ftHTMLexer.Token(ftHTMLexer.TokenType.Symbol, line, pos, c));
+                  mode = ftHTMLexer.LexMode.Definition;
+                  buffer = "";
+                  break;
+                }
+                if (!['\t', '\r'].includes(c)) this.throwCharError(c, line, pos);
+              }
+
+              if (!['\t', '\r'].includes(c)) buffer += c;
+            }
+          }
         }
 
         pos += 1;
@@ -142,11 +166,24 @@
         line += 1;
         pos = 1;
       }
-
+      
       return tokens;
     }
-    throwError(char, line, pos) {
-      throw new Error(`ftHTMLexer Error: Invalid character '${char}' @ ${line}:${pos}`);
+    throwCharError(char, line, pos) {
+      this.throwError(`Invalid character '${char}'`, line, pos);
+    }
+    throwError(msg, line, pos) {
+      throw new Error(`ftHTMLexer Error: ${msg} @ ${line}:${pos}`);
+    }
+    getTokenType(val) {
+      //assumes value is > 0 length
+      if (this.symbols.includes(val)) return ftHTMLexer.TokenType.Symbol;
+      if (this.keywords.includes(val)) return ftHTMLexer.TokenType.Keyword;
+      if (this.pragmas.includes(val)) return ftHTMLexer.TokenType.Pragma;
+      if (this.stringSyms.includes(val.charAt(0)) && (val.substr(-1) === val.charAt(0)))
+        return ftHTMLexer.TokenType.String;
+
+      return ftHTMLexer.TokenType.Word;
     }
   });
 

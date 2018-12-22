@@ -87,7 +87,7 @@ ftHTML.renderFile('filename');
 
 # File Format Rules
 
-The doctype keyword should always be used prior to first element of the file.
+The doctype keyword should always be used prior to first element or any pragmas of the file.
 
 The following is an example of a well formed ftHTML file:
 
@@ -123,14 +123,17 @@ Notes:
 - All selectors/attributes can be in any random order
 - If you include multiple id's in a single attribute set, an error will be thrown
 - If your attribute's value has spaces, wrap the value in quotations. 
-- The only special characters allowed are '.'(period), '-'(hypen), '_'(underscore) -- all cases where a special character other than that will be used it is recommened to wrap it in quotations (for example a relative path: `a(href='../../index.fthtml')`, classes and id's can not be wrapped in quotations
+- The only special characters allowed are '@'(at), '.'(period), '-'(hypen), '_'(underscore) -- all cases where a special character other than that will be used it is recommened to wrap it in quotations (for example a relative path: `a(href='../../index.fthtml')`, classes and id's can not be wrapped in quotations
 
 Syntax:
 
-`(<id> [<.class>] [<attr=value> || <attr="value">])`
+`(<#id>, <.class>, <attr=value>, <attr="value">)`
+
+You can also use variables as any of the above mentioned values, or simply use a variable for the attribute entirely:
+`(<.@variablename>, <attr=@variable>)`
 
 ## Elements
-There are 3 possible ways to create an element
+There are 5 possible ways to create an element
 - `<identifier> <string>`
 ```
 div "content"
@@ -159,6 +162,29 @@ div (#id .class1 data-foo=bar .class2)
     ...
   }
 }
+```
+- `<identifier> <@variable>`
+```
+div @var1
+
+-- or --
+
+div (#id @attrVar1) @var2
+
+-- or --
+
+div {
+  "This is a div with a sibling variable " + @paraVar
+}
+```
+
+- `<@variable>`
+```
+  body {
+  ...
+    @paraVar
+  ...
+  }
 ```
 
 ## Concating Elements
@@ -275,6 +301,102 @@ Produces:
   ...
 </footer>
 </html>
+```
+
+## Variables
+
+Variables are key value pairs that are encapsulated in the new `#vars` pragma. The idea for variables to easily define a commonly used style, pattern, element in one place and be able to use it in many places.
+
+Notes:
+- Variables must be enclosed in th `#vars` pragma
+- Variable values ___can only be string data types___
+- Variables can **NOT** use another variable as it's value
+- Variable values are evaluated **AS IS**
+- You can not import vars from another file
+- You can define variables anywhere in your markup as long as you meet the fundamental requirements noted above
+
+Syntax [Defining]:
+
+```
+ #vars
+  ...
+   <var name> "<var value>"
+  ...
+ #end
+```
+
+Syntax [Referencing]:
+
+`@<var name>`
+
+The following demonstrates:
+```
+doctype "html"
+
+#vars
+  btn-style-danger 'style="color: red; font-weight: bold; font-size: 1.1rem;"'
+  btn-classes-active "btn btn-group btn-primary active"
+
+  sitelinks
+    '<ul>
+      <li><a href="#">Home</a></li>
+      <li><a href="./profile">Profile</a></li>
+      <li><a href="./contact">Contact</a></li>
+      <li><a href="./policies">Terms</a></li>
+     </ul>'
+#end
+
+<!-- Once defined, variables can be used anywhere in your markup 
+      and the values are evaluated AS-IS
+      
+    Simply use the '@' symbol followed by the variables name -->
+    
+body 
+{
+  nav 
+  {
+    button(.@btn-classes-active) "Account"
+    button(.btn-primary @btn-style-danger) "Log Out"
+
+    div (.navbar) @sitelinks
+  }
+
+  ...
+
+  footer
+  {
+    @sitelinks
+  }
+}
+
+```
+
+Produces:
+
+```html
+<body>
+  <nav>
+    <button class="btn btn-group btn-primary active">Home</button>
+    <button class="btn-primary" style="color: red; font-weight: bold; font-size: 1.1rem;">Log Out</button>
+    
+    <div class="navbar">
+      <ul>
+        <li><a href="#">Home</a></li>
+        <li><a href="./profile">Profile</a></li>
+        <li><a href="./contact">Contact</a></li>
+        <li><a href="./policies">Terms</a></li>
+      </ul>
+    </div>
+  </nav>
+  <footer>
+    <ul>
+      <li><a href="#">Home</a></li>
+      <li><a href="./profile">Profile</a></li>
+      <li><a href="./contact">Contact</a></li>
+      <li><a href="./policies">Terms</a></li>
+    </ul>
+  </footer>
+</body>
 ```
 
 ## Comments
