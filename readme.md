@@ -66,7 +66,20 @@ html
 ```
 > Imported files must be local files and use ftHTML syntax.
 
+---
+# Table of Contents:
+
+| Point of Interest | Description |
+| ---| ---|
+| [Installing](#installing) | How to link to project & recommended usage |
+| [File Formatting Rules](#file-format-rules) | Review best practices for formatting your files and syntax |
+| [Documentation](#documentation) | Documentation examples and guides |
+| [Special Mentions](#special-mentions) | Some notes of cases we think are worth mentioning |
+| [Road Map](https://github.com/soulshined/fthtml/projects/1) | Outlined vision and plans |
+| [License](https://github.com/soulshined/fthtml/blob/master/LICENSE) | |
+
 # Installing
+[[top]](#table-of-contents)
 
 Using npm:
 
@@ -86,6 +99,7 @@ ftHTML.renderFile('filename');
 - Alternatively, you can just compile text with ftHTML.compile(text) if you don't want to use a file
 
 # File Format Rules
+[[top]](#table-of-contents)
 
 The doctype keyword should always be used prior to first element or any pragmas of the file.
 
@@ -116,6 +130,18 @@ body "Hello World"
 ```
 
 # Documentation
+[[top]](#table-of-contents)
+
+### Documentation Table Of Contents:
+
+| Point of Interest  |
+| ---|
+| [Elements](#elements) |
+| [Concatenation](#concating-elements) |
+| [Importing Files](#importing-files) |
+| [Variables](#variables) |
+| [Comments](#comments) |
+
 ## Attributes / Selectors
 
 Notes: 
@@ -133,6 +159,8 @@ You can also use variables as any of the above mentioned values, or simply use a
 `(<.@variablename>, <attr=@variable>)`
 
 ## Elements
+[[doc]](#documentation-table-of-contents)
+
 There are 5 possible ways to create an element
 - `<identifier> <string>`
 ```
@@ -188,6 +216,8 @@ div {
 ```
 
 ## Concating Elements
+[[doc]](#documentation-table-of-contents)
+
 When wanting to concatenate elements or child elements you must wrap them in `{ }` set. Errors will be thrown when necessary to prevent ill-formed syntax.
 
 The following demonstrates:
@@ -225,6 +255,7 @@ Produces:
 ```
 
 ## Importing files
+[[doc]](#documentation-table-of-contents)
 
 The idea behind importing files is for them to act like templates. For demonstration purposes lets use a navigation menu, which is usually found on every major page of your site. Instead of copying/pasting, you can create a file, let's say "header.fthtml", for demonstration, and import it inline using the keyword "import"
 
@@ -304,6 +335,7 @@ Produces:
 ```
 
 ## Variables
+[[doc]](#documentation-table-of-contents)
 
 Variables are key value pairs that are encapsulated in the new `#vars` pragma. The idea for variables to easily define a commonly used style, pattern, element in one place and be able to use it in many places.
 
@@ -400,6 +432,7 @@ Produces:
 ```
 
 ## Comments
+[[doc]](#documentation-table-of-contents)
 
 There are 3 types of comments to use in ftHTML syntax:
 - Line Comments
@@ -466,6 +499,8 @@ Produces:
 Therefore, in this particular preprocessor, you can not use comment as a custom tag identifier as it will maintain as a keyword, and therefore it can not have a child body
 
 ## Special Mentions
+[[top]](#table-of-contents)
+
 It is easy to include scripts such as javascript by wrapping them in quotations of choice.
 
 For example:
