@@ -337,14 +337,14 @@ Produces:
 ## Variables
 [[doc]](#documentation-table-of-contents)
 
-Variables are key value pairs that are encapsulated in the new `#vars` pragma. The idea for variables to easily define a commonly used style, pattern, element in one place and be able to use it in many places.
+Variables are key value pairs that are encapsulated in the new `#vars` pragma. The idea for variables is to easily define a commonly used style, pattern, element in one place and be able to use it in many places.
 
 Notes:
-- Variables must be enclosed in th `#vars` pragma
+- Variables must be enclosed in the `#vars` pragma
 - Variable values ___can only be string data types___
-- Variables can **NOT** use another variable as it's value
+- Variables can **NOT** use another variable as it's value (when defining or referencing)
 - Variables can **NOT** have children or attributes or another element as it's value
-- Variable values are evaluated **AS IS**
+- When referencing a variable, its value is evaluated **AS IS**
 - You can not import vars from another file
 - You can define variables anywhere in your markup as long as you meet the fundamental requirements noted above
 
