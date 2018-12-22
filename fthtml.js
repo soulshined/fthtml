@@ -1,13 +1,13 @@
 (function () {
-  const Parser = require('./fthtml-parser.js');
+  const ftHTMLParser = require('./fthtml-parser.js');
 
   function makeftHTML() {
     return ({
       compile: function (src) {
-        return (new Parser.Parser).compile(src);
+        return (new ftHTMLParser.Parser).compile(src);
       },
       renderFile: function (file) {
-        return (new Parser.Parser).renderFile(file);
+        return (new ftHTMLParser.Parser).renderFile(file);
       }
     });
   }

@@ -1,3 +1,12 @@
+# 0.7.0
+
+- Introducing variable functionality 
+  - Use variables to define frequently used styling, links, elements
+  - You can use a variable anywhere in your ftHTML markup by simply prefixing the variable name with an '@' symbol
+  - Variables can not hold ftHTML syntax, only as-is string values
+  - See readme.md for more details/examples
+- Keywords & Pragmas are now case-sensitive (all lowercase)
+
 # 0.6.2
 
 - Trivial Adjustments
