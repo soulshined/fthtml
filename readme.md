@@ -343,6 +343,7 @@ Notes:
 - Variables must be enclosed in th `#vars` pragma
 - Variable values ___can only be string data types___
 - Variables can **NOT** use another variable as it's value
+- Variables can **NOT** have children or attributes or another element as it's value
 - Variable values are evaluated **AS IS**
 - You can not import vars from another file
 - You can define variables anywhere in your markup as long as you meet the fundamental requirements noted above
