@@ -15,7 +15,7 @@
       if (file.startsWith('https:') || file.startsWith('http:')) {
         throw new Error(`Import files must be local, can not access '${file}'`);
       }
-      console.log(`\nRendering ${file}.fthtml`);
+      console.log(`ftHTML: Rendering ${file}.fthtml\n-------------------------------`);
 
       try {
         if (fs.existsSync(`${file}.fthtml`)) {
@@ -25,9 +25,9 @@
         else {
           console.warn(`Can not find file '${file}.fthtml' to import. File omitted`); return '';
         }
-      } catch (err) {
-        throw new Error(err);
-      }
+      } 
+      catch (err) { throw new Error(err); }
+      finally { console.log(`ftHTML: End of ${file}.fthtml`); }
     }
     peek(index) {
       return this.tokens[index + 1];
@@ -38,7 +38,6 @@
 
       let body = "";
       for (let i = 0; i < tokens.length; i++) {
-        console.log('last token', tokens[i]);
         const e = tokens[i];
         let peek = this.peek(i);
 
@@ -48,15 +47,14 @@
           if (e.value === '#' && peek !== undefined && peek.type === 'Pragma') {
             let end = this.findPragmaEnd(i);
             this.parsePragma(i, end);
-            i = end;
-            continue;
+            i = end; continue;
           }
 
           throw new Error(`Elements can not start with symbols. Error @ ${e.line}:${e.pos}`);
         }
         if (e.type === 'Keyword') {
           body += this.parseKeyword(e.value, i);
-          i = i + 1;
+          i++;
         }
         if (e.type === 'Variable') {
           if (peek !== undefined && (peek.type === 'String' || (peek.type === 'Symbol' && ['{', '('].includes(peek.value))))
@@ -89,12 +87,12 @@
           }
           if (peek.type === 'String') {
             body += this.createElement(e.value, '', this.parseString(peek.value));
-            i = i + 1;
+            i++;
           }
           if (peek.type === 'Word') body += this.createElement(e.value);
           if (peek.type === 'Variable') {
             body += this.createElement(e.value, '', this.parseVarToken(peek));
-            i = i + 1;
+            i++;
           }
         }
       }
@@ -110,8 +108,7 @@
         const e = this.tokens[i];
 
         if (e.type === 'Variable') {
-          attrs += ` ${this.parseVarToken(e)}`;
-          continue;
+          attrs += ` ${this.parseVarToken(e)}`; continue;
         }
         if (e.type === 'Symbol') {
           if (!['.', '#', '='].includes(e.value))
@@ -130,21 +127,16 @@
             id = ` id="${peek.value}"`;
           }
 
-          i = i + 1;
+          i++;
         }
         else {
           if (e.type === 'Word') {
             if (this.peek(i).type === 'Symbol' && this.peek(i).value === '=') {
               if (this.peek(i + 1).type === 'Word' || this.peek(i + 1).type === 'String' || this.peek(i + 1).type === 'Variable') {
-                if (this.peek(i + 1).type === 'String') {
-                  attrs += ` ${e.value}=${this.peek(i + 1).value}`;
-                }
-                else if (this.peek(i + 1).type === 'Variable') {
-                  attrs += ` ${e.value}=${this.parseVarToken(this.peek(i + 1))}`;
-                }
-                else {
-                  attrs += ` ${e.value}="${this.peek(i + 1).value}"`;
-                }
+                if (this.peek(i + 1).type === 'String') attrs += ` ${e.value}=${this.peek(i + 1).value}`;
+                else if (this.peek(i + 1).type === 'Variable') attrs += ` ${e.value}=${this.parseVarToken(this.peek(i + 1))}`;
+                else attrs += ` ${e.value}="${this.peek(i + 1).value}"`;
+                
                 i = i + 2;
               } else {
                 throw new Error(`Expecting a key value pair for attribute @ ${e.line}:${e.pos}`);
@@ -204,7 +196,7 @@
               throw new Error(`ftHTMLParse Error: Expecting a string value for variable @ ${e.line}:${e.pos}`);
 
             this.vars[e.value] = peek.value;
-            i += 1;
+            i++;
           }
           break;
 
@@ -266,8 +258,7 @@
 
         if (e.type === 'Symbol') {
           if (e.value === value) {
-            openMatches++;
-            continue;
+            openMatches++; continue;
           }
           if (e.value === closing) {
             openMatches--;
