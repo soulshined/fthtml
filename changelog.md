@@ -1,3 +1,6 @@
+# 0.7.3
+  - Reverting index.js
+  
 # 0.7.2
 - Small fixes
   - Simplified errors on parser & lexer for a fthtml language support extension for visual studio code and, in the future, other editors
