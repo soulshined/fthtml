@@ -1,0 +1,28 @@
+{
+  "name": "fthtml-cli",
+  "version": "1.0.0",
+  "description": "Command Line Interface for automating ftHTML to HTML conversions",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/soulshined/fthtml.git"
+  },
+  "keywords": [
+    "cli",
+    "fthtml",
+    "fthtml-cli"
+  ],
+  "author": "David Freer <davidwfreer@gmail.com> (https://davidfreer.me)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/soulshined/fthtml/issues"
+  },
+  "homepage": "https://github.com/soulshined/fthtml#readme",
+  "dependencies": {
+    "cli-spinner": "^0.2.8",
+    "minimist": "^1.2.0",
+    "node-dir": "^0.1.17"
+  }
+}

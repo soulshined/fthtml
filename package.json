@@ -1,7 +1,7 @@
 {
   "name": "fthtml",
-  "version": "0.7.3",
-  "description": "An HTML preprocesser built to cut down on special characters/tags and typing. Incorporates importing other .ftHTML files, basic variables and is not whitespace specific.",
+  "version": "1.0.0",
+  "description": "An HTML preprocesser built to cut down on special characters/tags and typing. Incorporates importing other .ftHTML files, basic variables and is not whitespace specific. Includes a CLI",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -10,8 +10,12 @@
     "ftHTML",
     "HTML",
     "preprocessor",
-    "variables"
+    "variables",
+    "cli"
   ],
+  "bin": {
+    "fthtml": "cli/bin/fthtml"
+  },
   "homepage": "https://github.com/soulshined/fthtml",
   "repository": "https://github.com/soulshined/fthtml",
   "author": "David Freer <davidwfreer@gmail.com> (https://davidfreer.me)",

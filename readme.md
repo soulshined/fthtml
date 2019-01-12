@@ -1,7 +1,5 @@
 This is a personal package created to simplify regular HTML markup and get rid of all the unnecessary typing needed for tags, selectors and special characters. More importantly this was practice for myself to get introduced into lexical analysis, parsing tokens and ASTs.
 
-This was made specifically with node.js in mind.
-
 __Turn this:__
 ```html
 <!DOCTYPE html>
@@ -74,6 +72,7 @@ html
 | [Installing](#installing) | How to link to project & recommended usage |
 | [File Formatting Rules](#file-format-rules) | Review best practices for formatting your files and syntax |
 | [Documentation](#documentation) | Documentation examples and guides |
+| [CLI](cli/readme.md) | ftHTML CLI Documentation and examples |
 | [Special Mentions](#special-mentions) | Some notes of cases we think are worth mentioning |
 | [Road Map](https://github.com/soulshined/fthtml/projects/1) | Outlined vision and plans |
 | [License](https://github.com/soulshined/fthtml/blob/master/LICENSE) | |
@@ -81,11 +80,13 @@ html
 # Installing
 [[top]](#table-of-contents)
 
-Using npm:
+**npm:**
 
-```
- npm install fthtml
-```
+It is recommended to install ftHTML globally to take advantage of the CLI. 
+
+For those that don't know, installing globally allows you to use the module in any directory of your computer. This makes it easier to convert files to static resources, process tasks for IDE's and more.
+
+> npm install -g fthtml
 
 # Using
 Node.js:
@@ -97,6 +98,8 @@ ftHTML.renderFile('filename');
 - `.fthtml` extn is intended to be omitted.
 - `.renderFile()` returns the interpreted HTML syntax
 - Alternatively, you can just compile text with ftHTML.compile(text) if you don't want to use a file
+
+Alternatively, you can convert .fthtml resources via [command line](cli/readme.md) and export them as static resources.
 
 # File Format Rules
 [[top]](#table-of-contents)
@@ -263,6 +266,7 @@ I would test each file individually before doing this to ensure proper syntax, a
 
 Notes:
 - Import supports relative paths (ex: "../../header")
+> It is important to note that an imported files' import statements do not import relative to that imported file, instead all imported files are relative to the ROOT directory, this is fine for top level folders, but when nesting imports it gets tricky to follow. When in doubt, we recommend to use `import './<full path>'` to ensure the file is found starting from the root
 - Import DOES NOT support absolute urls
 - It is REQUIRED that the imported file be .fthtml syntax
 - It is REQUIRED that you omit the extension
