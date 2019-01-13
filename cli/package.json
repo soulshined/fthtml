@@ -19,10 +19,5 @@
   "bugs": {
     "url": "https://github.com/soulshined/fthtml/issues"
   },
-  "homepage": "https://github.com/soulshined/fthtml#readme",
-  "dependencies": {
-    "cli-spinner": "^0.2.8",
-    "minimist": "^1.2.0",
-    "node-dir": "^0.1.17"
-  }
+  "homepage": "https://github.com/soulshined/fthtml#readme"
 }

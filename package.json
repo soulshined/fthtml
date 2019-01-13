@@ -1,6 +1,6 @@
 {
   "name": "fthtml",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "An HTML preprocesser built to cut down on special characters/tags and typing. Incorporates importing other .ftHTML files, basic variables and is not whitespace specific. Includes a CLI",
   "main": "index.js",
   "scripts": {
@@ -15,6 +15,11 @@
   ],
   "bin": {
     "fthtml": "cli/bin/fthtml"
+  },
+  "dependencies": {
+    "cli-spinner": "0.2.8",
+    "minimist": "1.2.0",
+    "node-dir": "0.1.17"
   },
   "homepage": "https://github.com/soulshined/fthtml",
   "repository": "https://github.com/soulshined/fthtml",
