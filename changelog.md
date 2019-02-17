@@ -1,3 +1,6 @@
+# 1.0.2
+  - Minor adjustments to fix issues with respective paths for import
+
 # 0.7.3
   - Reverting index.js
   

@@ -4,12 +4,13 @@ const error = require('./utils/error');
 module.exports = () => {
   const args = minimist(process.argv.slice(2), {
     string: ['convert', 'dest'],
-    boolean: ['version', 'keep-tree'],
+    boolean: ['version', 'keep-tree','test'],
     alias: {
       d: 'dest',
       e: 'exclude',
       k: 'keep-tree',
       p: 'pretty',
+      t: 'test',
       v: 'version'
     },
     '--': true

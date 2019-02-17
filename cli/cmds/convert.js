@@ -34,9 +34,14 @@
     console.time('Duration');
     fs.readFile(file, 'utf8', (err, content) => {
       if (err) throw error(err.message, true);
-      let html = fthtml.compile(content);
-
-      writeFile(dest, `${path.basename(file, '.fthtml')}.html`, args.p == true ? prettyPrint(html) : html);
+      const pp = path.parse(filename);
+      const html = fthtml.renderFile(path.resolve(pp.dir, pp.name));
+      if (args.t) {
+        console.log(`Writing to '${path.resolve(dest, path.basename(filename, '.fthtml') + '.html')}'\n\t${html}`);
+      }
+      else {
+        writeFile(dest, `${path.basename(file, '.fthtml')}.html`, args.p == true ? prettyPrint(html) : html);
+      }
       spinner.stop(true);
       console.log(`\nDone. Converted ${file} => ${dest}`);
       console.timeEnd('Duration');
@@ -50,8 +55,14 @@
     },
       (err, content, filename, next) => {
         if (err) error(err, true);
-        let html = fthtml.compile(content);
-        writeFile(getDestination(filename, dest, args), `${path.basename(filename, '.fthtml')}.html`, args.p == true ? prettyPrint(html) : html);
+        const pp = path.parse(filename);
+        const html = fthtml.renderFile(path.resolve(pp.dir, pp.name));
+        if (args.t) {
+          console.log(`\nWriting to '${path.resolve(getDestination(filename, dest, args),path.basename(filename, '.fthtml') +'.html')}'\n\t${html}`);
+        }
+        else {
+          writeFile(getDestination(filename, dest, args), `${path.basename(filename, '.fthtml')}.html`, args.p == true ? prettyPrint(html) : html);
+        }
         next();
       },
       (err, files) => {
