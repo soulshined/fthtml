@@ -34,10 +34,10 @@
     console.time('Duration');
     fs.readFile(file, 'utf8', (err, content) => {
       if (err) throw error(err.message, true);
-      const pp = path.parse(filename);
+      const pp = path.parse(file);
       const html = fthtml.renderFile(path.resolve(pp.dir, pp.name));
       if (args.t) {
-        console.log(`Writing to '${path.resolve(dest, path.basename(filename, '.fthtml') + '.html')}'\n\t${html}`);
+        console.log(`Writing to '${path.resolve(dest, path.basename(file, '.fthtml') + '.html')}'\n\t${html}`);
       }
       else {
         writeFile(dest, `${path.basename(file, '.fthtml')}.html`, args.p == true ? prettyPrint(html) : html);
@@ -91,7 +91,7 @@
   function getDestination(dir, dest, args) {
     let _path = path.resolve(
       dest === '' ? path.dirname(dir) : dest,
-      (args.k && root !== path.dirname(dir)) ? path.basename(path.dirname(dir)) : '');
+      (args.k && path.dirname(dir).startsWith(root) && path.dirname(dir) != root) ? path.relative(root, path.dirname(dir)) : '');
     return _path;
   }
   function getExcludedPaths(args) {
@@ -109,6 +109,7 @@
 
   //this pretty print func isn't perfect, but its a solid solution as opposed to using an entire library/module for this one task
   //taken from stackoverflow but lost the link because it was in a comment :( thank you creator...whoever you are!
+  // this does have some downsides when it comes to elements that preserve whitespace (pre, code)
   function prettyPrint(code, stripWhiteSpaces = true, stripEmptyLines = true) {
     var whitespace = ' '.repeat(2),
       currentIndent = 0,

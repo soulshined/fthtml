@@ -1,3 +1,6 @@
+# 1.0.3
+  - Fixed an issue with keeping tree source flag
+
 # 1.0.2
   - Minor adjustments to fix issues with respective paths for import
 
