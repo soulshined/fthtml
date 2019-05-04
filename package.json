@@ -4,7 +4,7 @@
   "description": "An HTML preprocesser built to cut down on special characters/tags and typing. Incorporates importing other .ftHTML files, basic variables and is not whitespace specific. Includes a CLI",
   "main": "index.js",
   "scripts": {
-    "test": "node .dev/test.js",
+    "test": "node .dev/tests.js",
     "test-cli" : "node cli/bin/fthtml -v & node cli/bin/fthtml convert .dev/markup --exclude excludes -t"
   },
   "keywords": [
