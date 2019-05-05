@@ -1,3 +1,10 @@
+# 2.0.0
+  - Added variable interpolation for strings
+  - Added template binding (very fundamental template binding)
+  - Added embedded language tags (js, css, php)
+    > type language in it's raw syntax
+  - Added exceptions
+
 # 1.0.3
   - Fixed an issue with keeping tree source flag
 
