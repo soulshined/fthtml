@@ -7,7 +7,7 @@
   const error = require('../utils/error');
 
   let root;
-  let spinner = new Spinner('%s Converting...');
+  let spinner = new Spinner('%s Converting...\n');
 
   module.exports = (args) => {
     let dest = args.d || '';
