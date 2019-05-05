@@ -1,5 +1,15 @@
 (function() {
-  class ftHTMLError {
+
+  Error.stackTraceLimit = 0;
+  class ftHTMLError extends Error {
+    constructor(err) {
+      super(err.toString());
+      this.name = err.name || this.constructor.name;
+      this.stack = undefined;
+    }
+  }
+
+  class ftHTMLBaseError {
     constructor(error, stack = []) {
       this.name = error.name;
       this.message = error.message || '';
@@ -9,15 +19,19 @@
     }
 
     toString() {
-      let position = this.position.line;
-      
-      if (this.position.start) position += `:${this.position.start}`;
-      if (this.position.end) position += `-${this.position.end}`;
+      let position = '';
+
+      if (this.position) {
+        position = ':' + this.position.line;
+        
+        if (this.position.start) position += `:${this.position.start}`;
+        if (this.position.end) position += `-${this.position.end}`;
+      }
 
       if (this.stack.length > 0)
-        this.stack[0] = `${this.stack[0]}:${position}`;
+        this.stack[0] = `${this.stack[0]}${position}`;
       
-      return `${this.name}: ${this.message}
+      return `${this.message}
     ${this.stack.map(f => `at ${f}`).join('\n    ')}`;
     }
   }
@@ -96,13 +110,15 @@
     }
   }
 
-  class ftHTMLImportError extends ftHTMLexerError {
+  class ftHTMLImportError {
     constructor(message) {
-      super(message, undefined, undefined);
+      this.name = this.constructor.name;
+      this.message = message;
     }
   }
 
   module.exports = {
+    ftHTMLBaseError,
     ftHTMLError,
     ftHTMLexerError,
     ftHTMLInvalidCharError,
