@@ -1,125 +1,100 @@
 (function() {
 
   Error.stackTraceLimit = 0;
-  class ftHTMLError extends Error {
-    constructor(err) {
-      super(err.toString());
-      this.name = err.name || this.constructor.name;
-      this.stack = undefined;
-    }
-  }
-
-  class ftHTMLBaseError {
-    constructor(error, stack = []) {
-      this.name = error.name;
-      this.message = error.message || '';
-      this.stack = stack;
-      this.nestedException = error;
-      this.position = error.position;
-    }
-
-    toString() {
-      let position = '';
-
-      if (this.position) {
-        position = ':' + this.position.line;
-        
-        if (this.position.start) position += `:${this.position.start}`;
-        if (this.position.end) position += `-${this.position.end}`;
-      }
-
-      if (this.stack.length > 0)
-        this.stack[0] = `${this.stack[0]}${position}`;
-      
-      return `${this.message}
-    ${this.stack.map(f => `at ${f}`).join('\n    ')}`;
-    }
-  }
-
-  class ftHTMLexerError {
-    constructor(message, line, pos) {
+  
+  class ftHTMLexerError extends Error {
+    constructor(message, line, pos, stackTrace = []) {
+      super();
       this.name = this.constructor.name;
-      this.message = message;
+      this.stack = undefined;
       this.position = {
         line : line,
         start: pos
       }
+      stackTrace[0].pos = { line: this.position.line, start: this.position.start };
+      this.message = `${message}
+    ${stackTrace.map(m => `at ${m.caller == null ? '' : m.caller + ' '}(${m.file}:${m.pos.line}:${m.pos.start})`).join("\n    ")}`;
     }
   }
 
   class ftHTMLInvalidCharError extends ftHTMLexerError {
-    constructor(char, line, pos) {
-      super(`Invalid character '${char}'`, line, pos);
+    constructor(char, line, pos, stackTrace = []) {
+      super(`Invalid character '${char}'`, line, pos, stackTrace);
     }
   }
 
-  class ftHTMLParserError {
-    constructor(message, token) {
+  class ftHTMLParserError extends Error {
+    constructor(message, token, stackTrace = []) {
+      super();
       this.name = this.constructor.name;
-      this.message = message;
+      this.stack = undefined;
       this.position = {
-        line : token.line,
+        line: token.line,
         start: token.pos,
-        end : token.pos+token.value.length
+        end: token.pos + token.value.length
       };
+      stackTrace[0].pos = { line : token.line, start : token.pos };
+      this.message = `${message}
+    ${stackTrace.map(m => `at ${m.caller == null ? '' : m.caller + ' '}(${m.file}:${m.pos.line}:${m.pos.start})`).join("\n    ")}`;
     }
   }
 
   class ftHTMLInvalidTypeError extends ftHTMLParserError {
-    constructor(token, expecting) {
-      super(`Invalid type '${token.type}'. Expecting ${expecting}`, token);
+    constructor(token, expecting, stackTrace = []) {
+      super(`Invalid type '${token.type}'. Expecting ${expecting}`, token, stackTrace);
       this.expecting = expecting;
       this.actual = token.type;
     }
   }
 
   class ftHTMLInvalidParentElementError extends ftHTMLParserError {
-    constructor(token) {
-      super(`A ${token.type} can not be a parent element, have children or attributes`, token);
+    constructor(token, stackTrace = []) {
+      super(`A ${token.type} can not be a parent element, have children or attributes`, token, stackTrace);
     }
   }
 
   class ftHTMLIncompleteElementError extends ftHTMLParserError {
-    constructor(token, actual, expecting) {
-      super(`${token.type}'s require ${expecting}`,token);
+    constructor(token, actual, expecting, stackTrace = []) {
+      super(`${token.type}'s require ${expecting}`,token, stackTrace);
       this.actual = actual.value;
     }
   }
 
   class ftHTMLInvalidKeywordError extends ftHTMLParserError {
-    constructor(token) {
-      super(`Invalid or unknown keyword '${token.value}`, token);
+    constructor(token,stackTrace = []) {
+      super(`Invalid, unknown or not allowed keyword '${token.value}'`, token, stackTrace);
     }
   }
 
   class ftHTMLInvalidElementNameError extends ftHTMLParserError {
-    constructor(token, expecting) {
-      super(`Invalid element name '${token.value}', expecting ${expecting}`,token);
+    constructor(token, expecting, stackTrace = []) {
+      super(`Invalid element name '${token.value}', expecting ${expecting}`,token, stackTrace);
     }
   }
 
   class ftHTMLInvalidVariableNameError extends ftHTMLParserError {
-    constructor(token, expecting) {
-      super(`Invalid variable name '${token.value}', when declaring a variable, the following pattern should be honored: ${expecting}`, token);
+    constructor(token, expecting, stackTrace = []) {
+      super(`Invalid variable name '${token.value}', when declaring a variable, the following pattern should be honored: ${expecting}`, token, stackTrace);
     }
   }
 
   class ftHTMLVariableDoesntExistError extends ftHTMLParserError {
-    constructor(token) {
-      super(`The variable '${token.value.substring(1)}' has not been declared`, token);
+    constructor(token, stackTrace = []) {
+      super(`The variable '${token.value.substring(1)}' has not been declared`, token, stackTrace);
     }
   }
 
-  class ftHTMLImportError {
-    constructor(message) {
+  class ftHTMLImportError extends Error {
+    constructor(message, stackTrace = []) {
+      super();
       this.name = this.constructor.name;
-      this.message = message;
+      this.stack = undefined;
+      this.message = `${message}
+    ${stackTrace.map(m => `at ${m.caller == null ? '' : m.caller + ' '}(${m.file}:${m.pos.line}:${m.pos.start})`).join("\n    ")}`;
     }
   }
 
   module.exports = {
-    ftHTMLBaseError,
-    ftHTMLError,
     ftHTMLexerError,
     ftHTMLInvalidCharError,
     ftHTMLParserError,

@@ -1,9 +1,10 @@
-# 2.0.0
-  - Added variable interpolation for strings
-  - Added template binding (very fundamental template binding)
+# 2.0.0 - Glaucous Update
+  - Added string interpolation
+  - Added template binding (very basic template binding)
   - Added embedded language tags (js, css, php)
-    > type language in it's raw syntax
-  - Added exceptions
+      > type language in it's raw syntax
+  - Better error handling
+  - Updated attributes values to automatically add double quotes; & convert single to double
 
 # 1.0.3
   - Fixed an issue with keeping tree source flag

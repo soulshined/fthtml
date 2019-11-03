@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "node .dev/tests.js",
-    "test-cli" : "node cli/bin/fthtml -v & node cli/bin/fthtml convert .dev/markup --exclude excludes -t"
+    "test-cli": "node cli/bin/fthtml -v & node cli/bin/fthtml convert .dev/markup --exclude excludes -t"
   },
   "keywords": [
     "ftHTML",

@@ -5,17 +5,18 @@
   const fthtml = require('../../index');
   const Spinner = require('cli-spinner').Spinner;
   const error = require('../utils/error');
+  const config = require('../utils/user-config')();
 
   let root;
   let spinner = new Spinner('%s Converting...\n');
 
   module.exports = (args) => {
-    let dest = args.d || '';
+    let dest = config.exportDir ? config.exportDir : args.d || '';
 
     try {
-      root = path.resolve(args._[1]);
+      root = config.rootDir ? config.rootDir : path.resolve(args._[1] || './');
 
-      if (args.d) {
+      if (!config.exportDir && args.d) {
         dest = path.resolve(dest);
         fs.lstatSync(dest).isDirectory();
       }
@@ -58,7 +59,7 @@
         const pp = path.parse(filename);
         const html = fthtml.renderFile(path.resolve(pp.dir, pp.name));
         if (args.t) {
-          console.log(`\nWriting to '${path.resolve(getDestination(filename, dest, args),path.basename(filename, '.fthtml') +'.html')}'\n\t${html}`);
+          console.log(`\nWriting to '${path.resolve(getDestination(filename, dest, args), path.basename(filename, '.fthtml') + '.html')}'\n\t${html}`);
         }
         else {
           writeFile(getDestination(filename, dest, args), `${path.basename(filename, '.fthtml')}.html`, args.p == true ? prettyPrint(html) : html);
@@ -90,12 +91,11 @@
   }
   function getDestination(dir, dest, args) {
     let _path = path.resolve(
-      dest === '' ? path.dirname(dir) : dest,
-      (args.k && path.dirname(dir).startsWith(root) && path.dirname(dir) != root) ? path.relative(root, path.dirname(dir)) : '');
+      dest === '' ? path.dirname(dir) : dest, ((config.keepTreeStructure || args.k) && path.dirname(dir).startsWith(root) && path.dirname(dir) != root) ? path.relative(root, path.dirname(dir)) : '');
     return _path;
   }
   function getExcludedPaths(args) {
-    let excluded = ['node_modules', 'test'];
+    let excluded = ['node_modules', 'test', ...config.excluded];
 
     if (args.e) {
       if (Array.isArray(args.e)) excluded.push(...args.e)
@@ -104,6 +104,7 @@
       if (args['--'].length > 0) excluded.push(...args['--']);
     }
 
+    console.log(excluded);
     return excluded;
   }
 
