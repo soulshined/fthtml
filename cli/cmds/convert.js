@@ -104,7 +104,6 @@
       if (args['--'].length > 0) excluded.push(...args['--']);
     }
 
-    console.log(excluded);
     return excluded;
   }
 
