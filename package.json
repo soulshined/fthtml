@@ -26,7 +26,7 @@
   },
   "homepage": "https://fthtml.com",
   "repository": "https://github.com/soulshined/fthtml",
-  "author": "David Freer <davidwfreer@gmail.com> (https://davidfreer.me)",
+  "author": "David Freer <davidwfreer@pm.me> (https://davidfreer.me)",
   "license": "GPL-3.0-or-later",
   "devDependencies": {
     "chai": "^4.2.0",
