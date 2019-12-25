@@ -4,10 +4,10 @@
   "description": "An HTML preprocesser built to cut down on special characters/tags and typing. Incorporates importing other .ftHTML files, basic variables and is not whitespace specific. Includes a CLI",
   "main": "index.js",
   "scripts": {
-    "test": "node .dev/tests.js",
-    "test-cli": "node cli/bin/fthtml -v & node cli/bin/fthtml convert .dev/markup --exclude excludes -t"
+    "tests": "mocha .dev/tests --recursive --reporter spec"
   },
   "keywords": [
+    "fthtml",
     "ftHTML",
     "HTML",
     "preprocessor",
@@ -27,5 +27,10 @@
   "homepage": "https://fthtml.com",
   "repository": "https://github.com/soulshined/fthtml",
   "author": "David Freer <davidwfreer@gmail.com> (https://davidfreer.me)",
-  "license": "GPL-3.0-or-later"
+  "license": "GPL-3.0-or-later",
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^6.2.2",
+    "sinon": "^7.5.0"
+  }
 }

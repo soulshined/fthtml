@@ -1,3 +1,7 @@
+# 2.0.1 - Unit testing
+  - Added unit testing
+  - Small changes to formatting
+
 # 2.0.0 - Glaucous Update
   - Added string interpolation
   - Added template binding (very basic template binding)
