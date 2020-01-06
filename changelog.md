@@ -1,3 +1,21 @@
+# 2.1.0 - Parser Redone & Typescript & CLI enhancements
+  - Parser redone from ground up 
+    - Better lexing and parser techniques 
+        - Compile time is now 90% faster! A file using imports (which reads sync) before clocked in at ~100ms to compile, a file with imports now is ~10ms, depending on garbage collection and amount of content of course. Building the ftHTML website with a bunch of imports and templates and over 80 files total now only takes a whopping 103ms
+    - Changes to errors and error messages
+    - No changes to syntax but more enforcements for some use cases have been implemented to better support future features (this shouldn't change much but it's best to test your projects before upgrading and rendering with this version)
+  - Moved to typescript! 
+    - This package is now developed with typescript; other than that no additional changes have been made, the vanilla js code you have now will still work. We've even included the js files in the lib so end users aren't required to have typescript installed before installing
+  - CLI 
+    - Removed useless dependencies ('cli-spinner' was just for show, provided no value)
+    - Moved away from `node-dir` package to the `glob` package because the features are more valuable
+        - You can now use glob patterns for excluding directories
+          - See [here](https://www.npmjs.com/package/glob#glob-primer) for pattern examples
+        - **NOTE YOU WILL NEED TO UPDATE YOUR EXCLUDED ARRAY if you have saved them with some kind of task or script for building/converting**
+    - introducing the `fthtmlconfig.json` file (out of beta)
+      - easily convert a file or directory to html by saving your configurations to a json file
+      - when this config file is in your project root dir and you configure it to your liking, all you have to do is execute `fthtml convert` from your root dir and that's it!
+
 # 2.0.1 - Unit testing
   - Added unit testing
   - Small changes to formatting
@@ -15,9 +33,6 @@
 
 # 1.0.2
   - Minor adjustments to fix issues with respective paths for import
-
-# 0.7.3
-  - Reverting index.js
   
 # 0.7.2
 - Small fixes
@@ -29,7 +44,6 @@
   - Use variables to define frequently used styling, links, elements
   - You can use a variable anywhere in your ftHTML markup by simply prefixing the variable name with an '@' symbol
   - Variables can not hold ftHTML syntax, only as-is string values
-  - See [readme.md](https://github.com/soulshined/fthtml/blob/master/readme.md#variables) for more details/examples
 - Keywords & Pragmas are now case-sensitive (all lowercase)
 
 # 0.6.2

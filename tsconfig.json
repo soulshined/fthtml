@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "target": "ES6",
+        "module": "commonjs",
+        "sourceMap": false,
+        "preserveConstEnums": true,
+        "types": [
+            "node"
+        ]
+    },
+    "include": [
+        "./lib/**/*",
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}

@@ -1,6 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const branding_1 = require("../utils/branding");
+import { default as branding } from "../utils/branding";
+
 const menus = {
     main: `
     fthtml-cli <command> <options>
@@ -9,6 +8,7 @@ const menus = {
     help ............... show help menu for a command
     version ............ show package version
   `,
+
     convert: `
     fthtml-cli convert <options>
 
@@ -17,10 +17,11 @@ const menus = {
     -k | --keep-tree ............................... keep tree structure (default false)
     -p | --pretty .................................. display unminified version (default false)
   `
-};
-function default_1(args) {
+}
+
+export default function (args) {
     const cmd = args._[0] === 'help' ? args._[1] : args._[0];
-    branding_1.default();
+
+    branding();
     console.log(menus[cmd] || menus.main);
 }
-exports.default = default_1;

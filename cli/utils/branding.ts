@@ -1,6 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-function default_1() {
+export default function () {
     console.log(`
        ....        
      :::::        
@@ -15,4 +13,3 @@ function default_1() {
      :::    :::.tml
      `);
 }
-exports.default = default_1;
