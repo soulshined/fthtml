@@ -92,7 +92,7 @@ function getDestination(dir, dest, args) {
     return _path;
 }
 function getExcludedPaths(args) {
-    let excluded = ['**/test/**', '.vscode', '.git', ...user_config_1.default.excluded];
+    let excluded = ['**/test/**', '**/node_modules/**', ...user_config_1.default.excluded];
     if (args.e) {
         if (Array.isArray(args.e))
             excluded.push(...args.e);

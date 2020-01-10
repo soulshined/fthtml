@@ -1,5 +1,6 @@
 # 2.1.0 - Parser Redone & Typescript & CLI enhancements
   - Parser redone from ground up 
+    - NOTE: The `+` is now deprecated. It is considered invalid markup. It was optional before, but we found users preferred not to use it anyways. Please ajust accordingly as you upgrade.
     - Better lexing and parser techniques 
         - Compile time is now 90% faster! A file using imports (which reads sync) before clocked in at ~100ms to compile, a file with imports now is ~10ms, depending on garbage collection and amount of content of course. Building the ftHTML website with a bunch of imports and templates and over 80 files total now only takes a whopping 103ms
     - Changes to errors and error messages

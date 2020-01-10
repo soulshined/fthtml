@@ -83,7 +83,6 @@ export class ftHTMLParser {
     }
 
     private parseWhileType(types: TT[], endingtype?: TT | string, onendingtype?: (html: string, err: boolean) => string, and_only_n_times: number = Number.POSITIVE_INFINITY) {
-        const t = this.peek();
         let html = '';
         let iterations = 0;
 
@@ -128,7 +127,11 @@ export class ftHTMLParser {
         const tag = this.evaluateENForToken(this.consume());
 
         const peek = this.peek();
-        if (this.isExpectedType(peek, TT.STRING)) return this.createElement(tag, null, this.parseString(this.consume().value));
+        if (SELF_CLOSING_TAGS.includes(tag)) {
+            if (this.isExpectedType(peek, 'Symbol_(')) return this.initElementWithAttrs(tag);
+            return this.createElement(tag);
+        }
+        else if (this.isExpectedType(peek, TT.STRING)) return this.createElement(tag, null, this.parseString(this.consume().value));
         else if (this.isExpectedType(peek, TT.VARIABLE)) return this.createElement(tag, null, this.parseVariable(this.consume()));
         else if (this.isExpectedType(peek, 'Symbol_(')) return this.initElementWithAttrs(tag);
         else if (this.isExpectedType(peek, 'Symbol_{')) return this.initElementWithChildren(tag);
@@ -281,6 +284,8 @@ export class ftHTMLParser {
             let peek = this.peek();
 
             if (t.type == TT.SYMBOL && t.value == ')') {
+                if (SELF_CLOSING_TAGS.includes(tag)) return this.createElement(tag, attrs);
+
                 if (this.isExpectedType(peek, 'Symbol_{')) return this.initElementWithChildren(tag, attrs);
                 else if (this.isExpectedType(peek, TT.STRING)) return this.createElement(tag, attrs, this.parseString(this.consume().value));
                 else if (this.isExpectedType(peek, TT.VARIABLE)) return this.createElement(tag, attrs, this.parseVariable(this.consume()));
