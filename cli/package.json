@@ -19,9 +19,5 @@
     "bugs": {
         "url": "https://github.com/soulshined/fthtml/issues"
     },
-    "homepage": "https://fthtml.com/cli",
-    "dependencies": {
-        "glob": "^7.1.6",
-        "minimist": "1.2.0"
-    }
+    "homepage": "https://fthtml.com/cli"
 }

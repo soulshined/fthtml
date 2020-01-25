@@ -1,7 +1,7 @@
 {
     "name": "fthtml",
     "displayName": "ftHTML",
-    "version": "2.1.1",
+    "version": "2.1.2",
     "description": "An HTML preprocesser built to cut down on special characters/tags and typing. Incorporates importing other .ftHTML files, basic variables and is not whitespace specific. Includes a CLI",
     "categories": [
         "Programming Languages",
@@ -28,8 +28,6 @@
     "types": "lib/index.d.ts",
     "scripts": {
         "build": "tsc && cd ./cli && tsc",
-        "postinstall": "cd ./cli && npm install",
-        "preuninstall": "cd ./cli && npm uninstall",
         "test": "mocha  --recursive \".dev/tests/**/*.js\"",
         "test:attributes": "mocha .dev/tests/parser/attributes --recursive --reporter spec",
         "test:comments": "mocha .dev/tests/parser/comments --recursive --reporter spec",
@@ -41,6 +39,10 @@
         "test:string-interpolation": "mocha .dev/tests/parser/string-interpolation --recursive --reporter spec",
         "test:self-closing-tags": "mocha .dev/tests/parser/self-closing-tags --recursive --reporter spec",
         "test:strings": "mocha .dev/tests/parser/strings --recursive --reporter spec"
+    },
+    "dependencies": {
+        "glob": "^7.1.6",
+        "minimist": "1.2.0"
     },
     "devDependencies": {
         "@types/node": "^13.1.2",
