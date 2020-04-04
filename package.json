@@ -42,7 +42,7 @@
     },
     "dependencies": {
         "glob": "^7.1.6",
-        "minimist": "1.2.2"
+        "minimist": "1.2.3"
     },
     "devDependencies": {
         "@types/node": "^13.1.2",
