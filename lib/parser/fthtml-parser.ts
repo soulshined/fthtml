@@ -248,12 +248,10 @@ export class ftHTMLParser {
         switch (elang.value) {
             case 'js':
                 return this.createElement('script', null, value);
-            case 'php':
-                return `<?php${value}?>`;
             case 'css':
                 return this.createElement('style', null, value);
             default:
-                throw new ftHTMLInvalidTypeError(elang, "'css','js','php'");
+                throw new ftHTMLInvalidTypeError(elang, "'css','js'");
         }
     }
 

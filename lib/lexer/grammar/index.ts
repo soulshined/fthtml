@@ -33,9 +33,6 @@ export default {
         },
         css: {
             stringSymbols: ftHTMLangConfig.stringSymbols
-        },
-        php: {
-            stringSymbols: ftHTMLangConfig.stringSymbols
         }
     }
 } as const;

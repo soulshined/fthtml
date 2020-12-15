@@ -196,29 +196,16 @@ export class ftHTMLexer {
                         stringBuffer = ch;
                         stringDelim = ch;
                     }
-                    else if (ELANG_MODE === 'php' && buffer.endsWith('<<<')) {
-                        if (_.endsEscaped(buffer.slice(0, -3))) throw new ftHTMLexerError('Heredoc/nowdoc not properly formed', TokenPosition(input.position().line, input.position().column - 3));
-                        _lm = LEX_MODE.ELANGB;
-                        stringBuffer = '<<<';
-                    }
                 }
                 else {
                     stringBuffer += ch;
 
-                    if (ELANG_MODE == 'php' && stringBuffer.startsWith('<<<')) {
+                    if (stringBuffer !== `${stringDelim}${stringDelim}`) {
+                        stringBuffer = readEscaped(stringDelim, TokenPosition(input.position().line, input.position().column - 1)) + stringDelim;
+                        buffer += stringBuffer;
+                    }
+                    _lm = LEX_MODE.ELANG;
 
-                        if (/<<<([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)[\r\n]+.*?[\r\n]+\1;[\r\n]+/gs.test(stringBuffer) ||
-                            /<<<(['"])([a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)\1[\r\n]+.*?[\r\n]+\2;[\r\n]+/gs.test(stringBuffer)) {
-                            _lm = LEX_MODE.ELANG;
-                        }
-                    }
-                    else {
-                        if (stringBuffer !== `${stringDelim}${stringDelim}`) {
-                            stringBuffer = readEscaped(stringDelim, TokenPosition(input.position().line, input.position().column - 1)) + stringDelim;
-                            buffer += stringBuffer;
-                        }
-                        _lm = LEX_MODE.ELANG;
-                    }
                 }
             }
 
