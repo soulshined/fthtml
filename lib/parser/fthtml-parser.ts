@@ -320,7 +320,7 @@ export class ftHTMLParser {
 
     private initElementWithChildren(tag: string, attrs?: object): string {
         const sym = this.consume();
-        return this.parseWhileType([TT.WORD, TT.ELANG, TT.PRAGMA, TT.STRING, TT.KEYWORD], 'Symbol_}', (html: string, error: boolean) => {
+        return this.parseWhileType([TT.WORD, TT.ELANG, TT.PRAGMA, TT.STRING, TT.KEYWORD, TT.VARIABLE], 'Symbol_}', (html: string, error: boolean) => {
             if (error) throw new ftHTMLInvalidTypeError(sym, 'Symbol_}');
             this.consume();
             return this.createElement(tag, attrs, html);
