@@ -1,3 +1,8 @@
+# 2.1.5
+  - This release deprecates the 'template' keyword as it conflicts with a native html tag, preparring for future release.
+  - Fixed issue where variables would fail in some instances as child elements
+  - Removed php from supported embedded languages
+
 # 2.1.0 - Parser Redone & Typescript & CLI enhancements
   - Parser redone from ground up
     - NOTE: The `+` is now deprecated. It is considered invalid markup. It was optional before, but we found users preferred not to use it anyways. Please ajust accordingly as you upgrade.
