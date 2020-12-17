@@ -7,6 +7,7 @@ const error_1 = require("../utils/error");
 const _ = require("../utils/frequent");
 const user_config_1 = require("../utils/user-config");
 const glob = require("glob");
+const js_beautify_1 = require("js-beautify");
 let root;
 function default_1(args) {
     var _a, _b, _c;
@@ -40,7 +41,7 @@ function convertFile(file, dest, args) {
             console.log(`Writing to '${path.resolve(dest, path.basename(file, '.fthtml') + '.html')}'\n\t${html}`);
         }
         else {
-            writeFile(dest, `${path.basename(file, '.fthtml')}.html`, args.p == true ? prettyPrint(html) : html);
+            writeFile(dest, `${path.basename(file, '.fthtml')}.html`, args.p == true ? beautify(html) : html);
         }
         console.log(`\nDone. Converted ${file} => ${dest}`);
         _.Timer.end();
@@ -60,7 +61,7 @@ function convertFiles(dir, dest, args) {
                 console.log(`\nWriting to '${path.resolve(getDestination(file, dest, args), path.basename(file, '.fthtml') + '.html')}'\n\t${html}`);
             }
             else {
-                writeFile(getDestination(file, dest, args), `${path.basename(file, '.fthtml')}.html`, args.p == true ? prettyPrint(html) : html);
+                writeFile(getDestination(file, dest, args), `${path.basename(file, '.fthtml')}.html`, args.p == true || user_config_1.default.prettify ? beautify(html) : html);
             }
         });
         console.log(`\nDone. Converted ${files.length} ftHTML files => ${dest == '' ? dir : dest}`);
@@ -92,7 +93,7 @@ function getDestination(dir, dest, args) {
     return _path;
 }
 function getExcludedPaths(args) {
-    let excluded = ['**/test/**', '**/node_modules/**', ...user_config_1.default.excluded];
+    let excluded = ['**/test/**', '**/node_modules/**', '**/.fthtml/imports/**', ...user_config_1.default.excluded];
     if (args.e) {
         if (Array.isArray(args.e))
             excluded.push(...args.e);
@@ -103,27 +104,12 @@ function getExcludedPaths(args) {
     }
     return excluded;
 }
-function prettyPrint(code, stripWhiteSpaces = true, stripEmptyLines = true) {
-    var whitespace = ' '.repeat(2), currentIndent = 0, char = null, nextChar = null, result = '';
-    for (var pos = 0; pos <= code.length; pos++) {
-        char = code.substr(pos, 1);
-        nextChar = code.substr(pos + 1, 1);
-        if (char === '<' && nextChar !== '/') {
-            result += '\n' + whitespace.repeat(currentIndent);
-            currentIndent++;
-        }
-        else if (char === '<' && nextChar === '/') {
-            if (--currentIndent < 0)
-                currentIndent = 0;
-            result += '\n' + whitespace.repeat(currentIndent);
-        }
-        else if (stripWhiteSpaces === true && char === ' ' && nextChar === ' ')
-            char = '';
-        else if (stripEmptyLines === true && char === '\n') {
-            if (code.substr(pos, code.substr(pos).indexOf("<")).trim() === '')
-                char = '';
-        }
-        result += char;
-    }
-    return result;
+function beautify(html) {
+    return js_beautify_1.html_beautify(html, {
+        indent_char: " ",
+        indent_scripts: "normal",
+        indent_size: 4,
+        indent_with_tabs: false,
+        preserve_newlines: true
+    });
 }

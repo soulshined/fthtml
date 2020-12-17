@@ -2,6 +2,20 @@ ftHTML is an HTML preprocessor created to simplify regular HTML markup and get r
 
 Visit https://www.fthtml.com for more information and resources
 
+Quickly build HTML resources without the limitations of HTML
+
+## Features
+* Variables and global variable support
+* Basic template and property binding
+* Import other files natively
+* Native JSON support
+* Macros like `__DATE__`, `__NOW__`, `__JS_URI__`
+* Functions like `choose`, `html_encode`, `html_decode`, `random`, `replace`, `str_repeat`, `str_reverse`, `str_format`, `substring`, `tcase`, `trim`
+* String interpolation
+* Embedded languagues
+* Easy typing
+* Selector syntax sugar - use `#` for attribute ids and `.` for classes
+
 __Turn this:__
 ```html
 <!DOCTYPE html>
@@ -29,7 +43,7 @@ __Into ftHTML:__
 doctype "html"
 html
 {
-  head 
+  head
   {
     title "Page Title"
     link(rel=stylesheet href=styles.css)
@@ -57,6 +71,7 @@ You can import other ftHTML files by simply using the `import` keyword. That way
 ```
 html
 {
+  import "header"
   body
   {
     ...
@@ -71,7 +86,7 @@ html
 
 **npm:**
 
-It is recommended to install ftHTML globally to take advantage of the CLI. 
+It is recommended to install ftHTML globally to take advantage of the CLI.
 
 For those that don't know, installing globally allows you to use the module in any directory of your computer. This makes it easier to convert files to static resources, process tasks for IDE's and more.
 

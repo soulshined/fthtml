@@ -5,6 +5,7 @@ import { default as error } from "../utils/error";
 import * as _ from "../utils/frequent";
 import { default as uconfig } from "../utils/user-config";
 import * as glob from "glob";
+import { html_beautify } from "js-beautify";
 
 let root: string;
 
@@ -37,7 +38,7 @@ function convertFile(file: string, dest: string, args: any) {
             console.log(`Writing to '${path.resolve(dest, path.basename(file, '.fthtml') + '.html')}'\n\t${html}`);
         }
         else {
-            writeFile(dest, `${path.basename(file, '.fthtml')}.html`, args.p == true ? prettyPrint(html) : html);
+            writeFile(dest, `${path.basename(file, '.fthtml')}.html`, args.p == true ? beautify(html) : html);
         }
         console.log(`\nDone. Converted ${file} => ${dest}`);
         _.Timer.end();
@@ -59,7 +60,7 @@ function convertFiles(dir, dest, args) {
                 console.log(`\nWriting to '${path.resolve(getDestination(file, dest, args), path.basename(file, '.fthtml') + '.html')}'\n\t${html}`);
             }
             else {
-                writeFile(getDestination(file, dest, args), `${path.basename(file, '.fthtml')}.html`, args.p == true ? prettyPrint(html) : html);
+                writeFile(getDestination(file, dest, args), `${path.basename(file, '.fthtml')}.html`, args.p == true || uconfig.prettify ? beautify(html) : html);
             }
         });
         console.log(`\nDone. Converted ${files.length} ftHTML files => ${dest == '' ? dir : dest}`);
@@ -95,7 +96,7 @@ function getDestination(dir, dest, args) {
 }
 
 function getExcludedPaths(args) {
-    let excluded = ['**/test/**', '**/node_modules/**', ...uconfig.excluded];
+    let excluded = ['**/test/**', '**/node_modules/**', '**/.fthtml/imports/**', ...uconfig.excluded];
 
     if (args.e) {
         if (Array.isArray(args.e)) excluded.push(...args.e)
@@ -107,35 +108,12 @@ function getExcludedPaths(args) {
     return excluded;
 }
 
-//this pretty print func isn't perfect, but its a solid solution as opposed to using an entire library/module for this one task
-//taken from stackoverflow but lost the link because it was in a comment :( thank you creator...whoever you are!
-// this does have some downsides when it comes to elements that preserve whitespace (pre, code)
-function prettyPrint(code: string, stripWhiteSpaces: boolean = true, stripEmptyLines = true) {
-    var whitespace = ' '.repeat(2),
-        currentIndent = 0,
-        char = null,
-        nextChar = null,
-        result = '';
-
-    for (var pos = 0; pos <= code.length; pos++) {
-        char = code.substr(pos, 1);
-        nextChar = code.substr(pos + 1, 1);
-
-        if (char === '<' && nextChar !== '/') {
-            result += '\n' + whitespace.repeat(currentIndent);
-            currentIndent++;
-        }
-        else if (char === '<' && nextChar === '/') {
-            if (--currentIndent < 0) currentIndent = 0;
-            result += '\n' + whitespace.repeat(currentIndent);
-        }
-        else if (stripWhiteSpaces === true && char === ' ' && nextChar === ' ') char = '';
-        else if (stripEmptyLines === true && char === '\n') {
-            if (code.substr(pos, code.substr(pos).indexOf("<")).trim() === '') char = '';
-        }
-
-        result += char;
-    }
-
-    return result;
+function beautify(html: string) {
+    return html_beautify(html, {
+        indent_char: " ",
+        indent_scripts: "normal",
+        indent_size: 4,
+        indent_with_tabs: false,
+        preserve_newlines: true
+    })
 }

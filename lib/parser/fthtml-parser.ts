@@ -1,22 +1,28 @@
+import * as fs from 'fs';
+import * as path from "path";
+import { default as uconfig } from "../../cli/utils/user-config";
+import { default as InputStream } from "../../lib/lexer/input-stream";
 import { ftHTMLexer } from "../lexer/fthtml-lexer";
-import { TOKEN_TYPE as TT, TokenStream, TokenPosition, token, Tokenable } from "../lexer/types";
+import grammar from "../lexer/grammar";
+import { token, Tokenable, TokenPosition, TokenStream, TOKEN_TYPE as TT } from "../lexer/types";
 import {
+    ftHTMLIllegalArgumentError,
+    ftHTMLIllegalArgumentTypeError,
     ftHTMLImportError,
     ftHTMLIncompleteElementError,
     ftHTMLInvalidElementNameError,
     ftHTMLInvalidKeywordError,
     ftHTMLInvalidTypeError,
     ftHTMLInvalidVariableNameError,
+    ftHTMLNotEnoughArgumentsError,
+    ftHTMLJSONError,
     ftHTMLParserError,
     ftHTMLVariableDoesntExistError,
-    StackTrace
+    StackTrace,
+    ftHTMLFunctionError
 } from "../utils/exceptions/index";
-import { SELF_CLOSING_TAGS } from "../utils/self-closing-tags";
-import { default as uconfig } from "../../cli/utils/user-config";
-import { default as InputStream } from "../../lib/lexer/input-stream";
 import * as _ from "../utils/functions";
-import * as path from "path";
-import * as fs from 'fs';
+import { SELF_CLOSING_TAGS } from "../utils/self-closing-tags";
 
 function ParserVariables(vars) {
     let variables = vars || {};
@@ -74,6 +80,8 @@ export class ftHTMLParser {
         html += this.parseWhileType([
             TT.WORD,
             TT.ELANG,
+            TT.FUNCTION,
+            TT.MACRO,
             TT.PRAGMA,
             TT.KEYWORD,
             TT.VARIABLE
@@ -93,15 +101,14 @@ export class ftHTMLParser {
             if (!types.includes(t.type)) throw new ftHTMLInvalidTypeError(t, '');
 
             if (t.type == TT.WORD) html += this.parseTag();
-            else if (t.type == TT.STRING) html += this.parseString(this.consume().value);
+            else if (t.type == TT.STRING) html += this.parseString(this.consume());
             else if (t.type == TT.VARIABLE) html += this.parseVariable(this.consume());
             else if (t.type == TT.ELANG) html += this.parseElang();
-            else if (t.type == TT.KEYWORD) {
-                if (t.value == 'template') html += this.parseTemplate();
-                else html += this.parseKeyword();
-            }
+            else if (t.type == TT.KEYWORD) html += this.parseKeyword();
             else if (t.type == TT.PRAGMA) this.parseMaybePragma();
             else if (t.type == TT.KEYWORD_DOCTYPE) html += this.parseKeyword();
+            else if (t.type == TT.FUNCTION) html += this.parseFunction();
+            else if (t.type == TT.MACRO) html += this.parseMacro();
             else throw new ftHTMLInvalidTypeError(t, '');
         }
 
@@ -109,16 +116,47 @@ export class ftHTMLParser {
         return html;
     }
 
-    private parseIfOne(type: TT): string {
-        if (this.isEOF()) return '';
+    private parseWhileTypeForTokens(types: TT[], endingtype?: TT | string, onendingtype?: (token: token[], err: boolean) => token[]): token[] {
+        let tokens: token[] = [];
 
+        while (!this.input.eof()) {
+            const t = this.peek();
+
+            if (endingtype && this.isExpectedType(t, endingtype)) return onendingtype(tokens, false);
+            if (!types.includes(t.type)) throw new ftHTMLInvalidTypeError(t, '');
+
+            if ([TT.WORD, TT.STRING, TT.VARIABLE].includes(t.type))
+                tokens.push(this.consume());
+            else if ([TT.ELANG, TT.KEYWORD, TT.PRAGMA, TT.FUNCTION, TT.MACRO].includes(t.type))
+                tokens.push({ type: t.type, position: t.position, value: this.parseWhileType([t.type], null, null, 1) });
+            else throw new ftHTMLInvalidTypeError(t, '');
+        }
+
+        if (endingtype) onendingtype(null, true);
+        return tokens;
+    }
+
+    private parseTypesInOrderForTokens(types: (TT | string)[][], initiator: token) {
+        let tokens = [];
+
+        types.forEach(subtypes => {
+            if (this.isEOF())
+                throw new ftHTMLIncompleteElementError(initiator, subtypes.join(', '));
+
+            let last = this.peek();
+            if (!this.isOneOfExpectedTypes(last, subtypes))
+                throw new ftHTMLInvalidTypeError(last, subtypes.join(', '));
+
+            tokens.push(this.consume());
+        });
+
+        return tokens;
+    }
+
+    private parseIfOne(type: TT): string {
         const t = this.peek();
         if (this.isExpectedType(t, type)) {
-            try {
-                return this.parseWhileType([type], null, null, 1);
-            } catch (error) {
-                if (!(error instanceof ftHTMLInvalidTypeError)) throw error;
-            }
+            return this.parseWhileType([type], null, null, 1);
         }
         return '';
     }
@@ -131,10 +169,12 @@ export class ftHTMLParser {
             if (this.isExpectedType(peek, 'Symbol_(')) return this.initElementWithAttrs(tag);
             return this.createElement(tag);
         }
-        else if (this.isExpectedType(peek, TT.STRING)) return this.createElement(tag, null, this.parseString(this.consume().value));
+        else if (this.isExpectedType(peek, TT.STRING)) return this.createElement(tag, null, this.parseString(this.consume()));
         else if (this.isExpectedType(peek, TT.VARIABLE)) return this.createElement(tag, null, this.parseVariable(this.consume()));
         else if (this.isExpectedType(peek, 'Symbol_(')) return this.initElementWithAttrs(tag);
         else if (this.isExpectedType(peek, 'Symbol_{')) return this.initElementWithChildren(tag);
+        else if (this.isExpectedType(peek, TT.FUNCTION)) return this.createElement(tag, null, this.parseFunction());
+        else if (this.isExpectedType(peek, TT.MACRO)) return this.createElement(tag, null, this.parseMacro());
         else return this.createElement(tag);
     }
 
@@ -149,11 +189,43 @@ export class ftHTMLParser {
                 if (t.type == TT.PRAGMA && t.value == 'end') return;
                 if (t.type != TT.WORD) throw new ftHTMLInvalidVariableNameError(t, '[\w-]+');
 
-                const peek = this.input.peek();
-                if (this.input.eof()) throw new ftHTMLInvalidTypeError(t, 'a string value for variables');
+                if (this.input.eof()) throw new ftHTMLIncompleteElementError(t, 'a string or ftHTML block values for variables');
 
-                if (peek.type == TT.STRING) this.vars[this.evaluateENForToken(t)] = this.parseString(this.consume().value);
-                else throw new ftHTMLInvalidTypeError(peek, TT.STRING);
+                const peek = this.input.peek();
+                if (peek.type == TT.STRING) this.vars[this.evaluateENForToken(t)] = this.parseString(this.consume());
+                else if (this.isExpectedType(peek, 'Symbol_{'))
+                    this.vars[this.evaluateENForToken(t)] = this.parseBindingPropertyValueAsFTHTML();
+                else if (this.isExpectedType(peek, TT.FUNCTION))
+                    this.vars[this.evaluateENForToken(t)] = this.parseFunction();
+                else if (this.isExpectedType(peek, TT.MACRO))
+                    this.vars[this.evaluateENForToken(t)] = this.parseMacro();
+                else if (this.isExpectedType(peek, 'Word_json')) {
+                    this.consume();
+                    const parsed = this.parseTypesInOrderForTokens([['Symbol_('], [TT.STRING], ['Symbol_)']], peek);
+                    const [_, json_file] = parsed;
+
+                    if (json_file.value.startsWith('https:') || json_file.value.startsWith('http:'))
+                        throw new ftHTMLImportError(`Files must be local, can not access '${json_file.value}'`);
+
+                    let dir = uconfig.jsonDir ?? this.vars._$.__dir;
+                    if (json_file.value.startsWith('&')) {
+                        dir = this.vars._$.__dir;
+                        json_file.value = json_file.value.substring(1);
+                    }
+                    const file = path.resolve(dir, `${json_file.value}.json`);
+
+                    if (!fs.existsSync(file))
+                        throw new ftHTMLJSONError(`Can not find json file '${file}'`, json_file);
+
+                    const filecontents = fs.readFileSync(file, 'utf-8');
+                    try {
+                        this.vars[this.evaluateENForToken(t)] = JSON.parse(filecontents);
+                    }
+                    catch (error) {
+                        throw new ftHTMLJSONError(error.message, json_file);
+                    }
+                }
+                else throw new ftHTMLInvalidTypeError(peek, 'string or ftHTML block values');
             } while (!this.input.eof());
 
             throw new ftHTMLIncompleteElementError(pragma, `Expecting '#end' pragma keyword for starting pragma '${pragma.value}' but none found`, pragma);
@@ -161,32 +233,84 @@ export class ftHTMLParser {
         else throw new ftHTMLInvalidKeywordError(pragma);
     }
 
-    private parseString(value: string): string {
-        let matches = _.getAllMatches(value, /\${[ ]*([\w-]+)\?[ ]*}/g);
-        matches.forEach(i => {
-            const v = this.vars.import[i[1]];
-            if (v) value = value.replace(i[0], v);
-            else value = value.replace(i[0], '');
-        });
+    private parseString(token: token): string {
+        let matches = _.getAllMatches(token.value, /(\\)?(\${[ ]*([\w-]+)\?[ ]*})/g);
+        for (const [all, escaped, interp, e] of matches) {
+            if (escaped) {
+                token.value = token.value.replace(all, interp);
+                continue;
+            }
 
-        matches = _.getAllMatches(value, /\${[ ]*([\w-]+)[ ]*}/g);
-        matches.forEach(i => {
-            const v = this.vars.import[i[1]];
-            if (v) value = value.replace(i[0], v);
-        });
+            const v = this.vars.import[e];
+            if (v) token.value = token.value.replace(all, v);
+            else if (grammar.macros[e]) return;
+            else token.value = token.value.replace(all, '');
+        }
 
-        matches = _.getAllMatches(value, /\${[ ]*@([\w-]+)[ ]*}/g);
-        matches.forEach(i => {
-            const v = this.vars[i[1]];
-            if (v) value = value.replace(i[0], v);
-        });
+        matches = _.getAllMatches(token.value, /(\\)?(\${[ ]*([\w-]+)[ ]*})/g);
+        for (const [all, escaped, interp, e] of matches) {
+            if (escaped) {
+                token.value = token.value.replace(all, interp);
+                continue;
+            }
 
-        return value;
+            const v = this.vars.import[e];
+            if (v) token.value = token.value.replace(all, v);
+            else if (grammar.macros[e]) token.value = token.value.replace(all, grammar.macros[e].apply());
+        }
+
+        matches = _.getAllMatches(token.value, /(\\)?(\${[ ]*@([\w-]+)[ ]*})/g);
+        for (const [all, escaped, interp, e] of matches) {
+            if (escaped) {
+                token.value = token.value.replace(all, interp);
+                continue;
+            }
+
+            const v = this.vars[e] || uconfig.globalvars[e];
+            if (v !== undefined) token.value = token.value.replace(all, v);
+        }
+
+        matches = _.getAllMatches(token.value, /(\\)?(\${[ ]*@([\w-]+)((\[\d+\])*(?:\.[a-zA-Z0-9][a-zA-Z0-9-_]*(?:\[\d+\])*)+|(?:\[\d+\])+)+[ ]*})/g);
+        for (const [all, escaped, interp, e, kvps] of matches) {
+            if (escaped) {
+                token.value = token.value.replace(all, interp);
+                continue;
+            }
+
+            let v = this.vars[e];
+            if (v === undefined) continue;
+
+            const keys = kvps.replace(/\[(\d+)\]/g, ".$1").split(".");
+            keys.shift();
+
+            keys.forEach(key => {
+                if (v[key] === undefined)
+                    throw new ftHTMLJSONError(`Cannot read property '${key}' of '${all}'`, token);
+                v = v[key]
+            });
+
+            if (v !== undefined)
+                token.value = token.value.replace(all, v);
+        }
+
+        return token.value;
     }
 
     private parseVariable(token: token): string {
-        if (this.vars[token.value] === undefined) throw new ftHTMLVariableDoesntExistError(token);
-        return this.parseString(this.vars[token.value]);
+        const value = this.vars[token.value] !== undefined
+            ? this.vars[token.value]
+            : uconfig.globalvars[token.value];
+
+        if (value === undefined)
+            throw new ftHTMLVariableDoesntExistError(token);
+
+        return this.parseString({ value, type: token.type, position: token.position });
+    }
+
+    private parseStringOrVariable(token: token): string {
+        if (token.type === TT.VARIABLE) return this.parseVariable(token);
+
+        return this.parseString(token);
     }
 
     private parseKeyword(): string {
@@ -195,12 +319,21 @@ export class ftHTMLParser {
         if (this.input.eof() || !this.isExpectedType(this.peek(), TT.STRING))
             throw new ftHTMLIncompleteElementError(keyword, 'string values');
 
-        const { value } = this.consume();
+        const token = this.consume();
         switch (keyword.value) {
-            case 'comment': return `<!-- ${this.parseString(value)} -->`;
-            case 'doctype': return `<!DOCTYPE ${this.parseString(value)}>`;
+            case 'comment': return `<!-- ${this.parseString(token)} -->`;
+            case 'doctype': return `<!DOCTYPE ${this.parseString(token)}>`;
             case 'import':
-                let file = path.resolve(uconfig.importDir ?? this.vars._$.__dir, value);
+                if (this.isExpectedType(this.peek(), 'Symbol_{')) {
+                    this.vars.import.import = this.parseString(token);
+                    return this.parseTemplate();
+                }
+                let dir = uconfig.importDir ?? this.vars._$.__dir;
+                if (token.value.startsWith('&')) {
+                    dir = this.vars._$.__dir;
+                    token.value = token.value.substring(1);
+                }
+                const file = path.resolve(dir, token.value);
                 StackTrace.update(0, 'import', TokenPosition(keyword.position.line, keyword.position.column));
 
                 return new ftHTMLParser().renderFile(file);
@@ -210,33 +343,47 @@ export class ftHTMLParser {
     }
 
     private parseTemplate(): string {
-        const template = this.consume();
-        if (!this.isExpectedType(this.peek(), 'Symbol_{')) throw new ftHTMLIncompleteElementError(template, `an opening and closing braces for 'template' keyword`, this.peek());
-        this.consume();
+        const brace = this.consume(),
+            template = Object.assign({}, this.vars.import);
 
         do {
             const t = this.consume();
 
             if (this.isExpectedType(t, 'Symbol_}')) {
-                if (!this.vars.import.import) throw new ftHTMLParserError(`templates require a valid import statement`, t);
+                let dir = uconfig.importDir ?? this.vars._$.__dir;
+                if (template.import.startsWith('&')) {
+                    dir = this.vars._$.__dir;
+                    template.import = template.import.substring(1);
+                }
+                const file = path.resolve(dir, template.import);
 
-                let file = path.resolve(uconfig.templateDir ?? this.vars._$.__dir, this.vars.import.import);
+                StackTrace.update(0, 'import template', TokenPosition(brace.position.line, brace.position.column));
 
-                StackTrace.update(0, 'template', TokenPosition(template.position.line, template.position.column));
-
-                return new ftHTMLParser({ import: this.vars.import }).renderFile(file);
+                return new ftHTMLParser({ import: template }).renderFile(file);
             }
 
-            if (t.type != TT.WORD && !this.isExpectedType(t, 'Keyword_import')) throw new ftHTMLInvalidVariableNameError(t, '[\w-]+');
+            if (t.type != TT.WORD) throw new ftHTMLInvalidVariableNameError(t, '[\w-]+');
+            if (this.input.eof()) throw new ftHTMLIncompleteElementError(t, 'string, macro, function or ftHTML block values');
 
             const peek = this.input.peek();
-            if (this.input.eof()) throw new ftHTMLIncompleteElementError(t, 'string values');
-
-            if (peek.type == TT.STRING) this.vars.import[this.evaluateENForToken(t)] = this.parseString(this.consume().value);
-            else throw new ftHTMLIncompleteElementError(peek, 'string values');
+            if ([TT.STRING, TT.VARIABLE].includes(peek.type)) template[this.evaluateENForToken(t)] = this.parseStringOrVariable(this.consume());
+            else if (this.isExpectedType(peek, TT.FUNCTION)) template[this.evaluateENForToken(t)] = this.parseFunction();
+            else if (this.isExpectedType(peek, TT.MACRO)) template[this.evaluateENForToken(t)] = this.parseMacro();
+            else if (this.isExpectedType(peek, 'Symbol_{'))
+                template[this.evaluateENForToken(t)] = this.parseBindingPropertyValueAsFTHTML();
+            else throw new ftHTMLInvalidTypeError(peek, 'string, macro, function or ftHTML block values');
         } while (!this.input.eof())
 
-        throw new ftHTMLInvalidTypeError(template, `an opening and closing braces for 'template' keyword`);
+        throw new ftHTMLInvalidTypeError(brace, `an opening and closing braces for template imports`);
+    }
+
+    private parseBindingPropertyValueAsFTHTML(): string {
+        const brace = this.consume();
+        return this.parseWhileType([TT.WORD, TT.ELANG, TT.STRING, TT.KEYWORD, TT.VARIABLE, TT.FUNCTION, TT.MACRO], 'Symbol_}', (html: string, error: boolean) => {
+            if (error) throw new ftHTMLInvalidTypeError(brace, 'Symbol_}');
+            this.consume();
+            return html;
+        })
     }
 
     private parseElang(): string {
@@ -253,6 +400,103 @@ export class ftHTMLParser {
             default:
                 throw new ftHTMLInvalidTypeError(elang, "'css','js'");
         }
+    }
+
+    private parseFunction(): string {
+        const func = this.consume();
+
+        if (!this.isExpectedType(this.peek(), 'Symbol_('))
+            throw new ftHTMLInvalidTypeError(this.peek(), 'opening and closing parenthesis');
+        this.consume();
+
+        const funcrules = grammar.functions[func.value],
+            params = Object.values(funcrules.argPatterns);
+
+        let args = [];
+        if (funcrules.argsSequenceStrict) {
+            args = this.parseFunctionArgsInOrder(params.filter(param => param.isRestParameter === undefined), func);
+            const restParameters = params.filter(param => param.isRestParameter !== undefined);
+            if (restParameters.length === 1) {
+                args.push(...this.parseWhileTypeForTokens(restParameters[0].type, 'Symbol_)', (tokens: token[], error: boolean) => {
+                    if (error) throw new ftHTMLIncompleteElementError(func, "opening and closing parenthesis")
+                    this.consume();
+                    return tokens;
+                }))
+            }
+            else if (this.isEOF()) {
+                throw new ftHTMLIncompleteElementError(func, 'opening and closing parenthesis');
+            }
+            else if (!this.isExpectedType(this.peek(), 'Symbol_)')) {
+                throw new ftHTMLInvalidTypeError(this.peek(), 'a closing parenthesis for functions');
+            }
+            else {
+                this.consume();
+            }
+        }
+        else {
+            args = this.parseWhileTypeForTokens([...new Set(params.map(param => param.type).flat())], 'Symbol_)', (tokens: token[], error: boolean) => {
+                if (error) throw new ftHTMLIncompleteElementError(func, "opening and closing parenthesis")
+                this.consume();
+                return tokens;
+            });
+        }
+
+        if (args.length < params.filter(m => !m.isOptional).length)
+            throw new ftHTMLNotEnoughArgumentsError(func, params.filter(m => !m.isOptional).length, args.length);
+
+        const values = args.map(m => {
+            return [TT.VARIABLE, TT.STRING].includes(m.type)
+                ? this.parseStringOrVariable(m)
+                : m.value;
+        });
+
+        const result = grammar.functions[func.value].do(...values);
+        if (result.error)
+            throw new ftHTMLFunctionError(result.msg, func);
+
+        return result.value;
+    }
+
+    private parseFunctionArgsInOrder(argPatterns, initiator: token) {
+        let tokens: token[] = [];
+
+        argPatterns.forEach((arg, index) => {
+            if (this.isEOF()) {
+                const args: TT[] = arg.type;
+                const lastarg = args.pop();
+                throw new ftHTMLIncompleteElementError(initiator, `a ${args.join(', ')} or ${lastarg} arg for argument '${arg.name}' at position ${index + 1}`);
+            }
+
+            let peek = this.peek();
+
+            if (!this.isOneOfExpectedTypes(peek, arg.type))
+                if (arg.isOptional === true) return;
+                else throw new ftHTMLIllegalArgumentTypeError(arg, initiator, peek);
+
+            if (this.isExpectedType(peek, TT.FUNCTION)) {
+                tokens.push({ value: this.parseFunction(), type: TT.STRING, position: peek.position })
+                return;
+            }
+            else if (this.isExpectedType(peek, TT.MACRO)) {
+                tokens.push({ value: this.parseMacro(), type: TT.STRING, position: peek.position });
+                return;
+            }
+
+            let val = [TT.VARIABLE, TT.STRING].includes(peek.type)
+                ? this.parseStringOrVariable(peek)
+                : peek.value;
+
+            if (arg.possibleValues !== undefined && !arg.possibleValues.includes(val.toLowerCase()) && !arg.default)
+                throw new ftHTMLIllegalArgumentError(arg, index, initiator, peek);
+
+            tokens.push(this.consume());
+        });
+
+        return tokens;
+    }
+
+    private parseMacro() {
+        return grammar.macros[this.consume().value].apply();
     }
 
     private evaluateENForToken(token: token) {
@@ -285,8 +529,10 @@ export class ftHTMLParser {
                 if (SELF_CLOSING_TAGS.includes(tag)) return this.createElement(tag, attrs);
 
                 if (this.isExpectedType(peek, 'Symbol_{')) return this.initElementWithChildren(tag, attrs);
-                else if (this.isExpectedType(peek, TT.STRING)) return this.createElement(tag, attrs, this.parseString(this.consume().value));
+                else if (this.isExpectedType(peek, TT.STRING)) return this.createElement(tag, attrs, this.parseString(this.consume()));
                 else if (this.isExpectedType(peek, TT.VARIABLE)) return this.createElement(tag, attrs, this.parseVariable(this.consume()));
+                else if (this.isExpectedType(peek, TT.FUNCTION)) return this.createElement(tag, attrs, this.parseFunction());
+                else if (this.isExpectedType(peek, TT.MACRO)) return this.createElement(tag, attrs, this.parseMacro());
                 else return this.createElement(tag, attrs);
             }
 
@@ -303,13 +549,13 @@ export class ftHTMLParser {
                 if (this.isExpectedType(peek, 'Symbol_=')) {
                     this.consume();
                     peek = this.peek();
-                    if (![TT.STRING, TT.WORD, TT.VARIABLE].includes(peek.type))
+                    if (![TT.STRING, TT.WORD, TT.VARIABLE, TT.MACRO].includes(peek.type))
                         throw new ftHTMLInvalidTypeError(peek, 'a key value pair');
 
-                    const kvp = this.consume();
-                    if (kvp.type == TT.STRING) attrs.misc += ` ${t.value}="${this.parseString(kvp.value)}"`;
-                    else if (kvp.type == TT.VARIABLE) attrs.misc += ` ${t.value}="${this.parseVariable(kvp)}"`
-                    else attrs.misc += ` ${t.value}="${kvp.value}"`;
+                    if (peek.type == TT.STRING) attrs.misc += ` ${t.value}="${this.parseString(this.consume())}"`;
+                    else if (peek.type == TT.VARIABLE) attrs.misc += ` ${t.value}="${this.parseVariable(this.consume())}"`;
+                    else if (peek.type == TT.MACRO) attrs.misc += ` ${t.value}="${this.parseMacro()}"`;
+                    else attrs.misc += ` ${t.value}="${this.consume().value}"`;
                 }
                 else attrs.misc += ` ${t.value}`;
             }
@@ -320,7 +566,7 @@ export class ftHTMLParser {
 
     private initElementWithChildren(tag: string, attrs?: object): string {
         const sym = this.consume();
-        return this.parseWhileType([TT.WORD, TT.ELANG, TT.PRAGMA, TT.STRING, TT.KEYWORD, TT.VARIABLE], 'Symbol_}', (html: string, error: boolean) => {
+        return this.parseWhileType([TT.WORD, TT.ELANG, TT.PRAGMA, TT.STRING, TT.KEYWORD, TT.VARIABLE, TT.FUNCTION, TT.MACRO], 'Symbol_}', (html: string, error: boolean) => {
             if (error) throw new ftHTMLInvalidTypeError(sym, 'Symbol_}');
             this.consume();
             return this.createElement(tag, attrs, html);
@@ -337,6 +583,10 @@ export class ftHTMLParser {
     private isExpectedType(actual: token, expected: TT | string): boolean {
         // NOTE [02-Jan-2020]: assumes eof is irrelevant
         return actual && (actual.type === expected || `${actual.type}_${actual.value}` === expected);
+    }
+
+    private isOneOfExpectedTypes(actual: token, expected: (TT | string)[]): boolean {
+        return actual && (expected.includes(actual.type) || expected.includes(`${actual.type}_${actual.value}`));
     }
 
     private peek(): Tokenable {

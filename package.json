@@ -1,7 +1,7 @@
 {
     "name": "fthtml",
     "displayName": "ftHTML",
-    "version": "2.1.5",
+    "version": "3.0.0",
     "description": "An HTML preprocesser built to cut down on special characters/tags and typing. Incorporates importing other .ftHTML files, basic variables and is not whitespace specific. Includes a CLI",
     "categories": [
         "Programming Languages",
@@ -27,27 +27,33 @@
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
     "scripts": {
-        "build": "tsc && cd ./cli && tsc",
-        "test": "mocha  --recursive \".dev/tests/**/*.js\"",
-        "test:attributes": "mocha .dev/tests/parser/attributes --recursive --reporter spec",
-        "test:comments": "mocha .dev/tests/parser/comments --recursive --reporter spec",
-        "test:elangs": "mocha .dev/tests/parser/elangs --recursive --reporter spec",
-        "test:keywords": "mocha .dev/tests/parser/keywords --recursive --reporter spec",
-        "test:tagnames": "mocha .dev/tests/parser/tagnames --recursive --reporter spec",
-        "test:pragmas": "mocha .dev/tests/parser/pragmas --recursive --reporter spec",
-        "test:variables": "mocha .dev/tests/parser/variables --recursive --reporter spec",
-        "test:string-interpolation": "mocha .dev/tests/parser/string-interpolation --recursive --reporter spec",
-        "test:self-closing-tags": "mocha .dev/tests/parser/self-closing-tags --recursive --reporter spec",
-        "test:strings": "mocha .dev/tests/parser/strings --recursive --reporter spec"
+        "build": "tsc",
+        "tests": "cd ../fthtml_dev && npm run tests",
+        "test:attributes": "cd ../fthtml_dev && npm run test:attributes",
+        "test:comments": "cd ../fthtml_dev && npm run test:comments",
+        "test:elangs": "cd ../fthtml_dev && npm run test:elangs",
+        "test:functions": "cd ../fthtml_dev && npm run test:functions",
+        "test:keywords": "cd ../fthtml_dev && npm run test:keywords",
+        "test:macros": "cd ../fthtml_dev && npm run test:macros",
+        "test:tagnames": "cd ../fthtml_dev && npm run test:tagnames",
+        "test:pragmas": "cd ../fthtml_dev && npm run test:pragmas",
+        "test:variables": "cd ../fthtml_dev && npm run test:variables",
+        "test:string-interpolation": "cd ../fthtml_dev && npm run test:string-interpolation",
+        "test:self-closing-tags": "cd ../fthtml_dev && npm run test:self-closing-tags",
+        "test:strings": "cd ../fthtml_dev && npm run test:strings"
     },
     "dependencies": {
         "glob": "^7.1.6",
+        "he": "^1.2.0",
+        "js-beautify": "^1.13.0",
         "minimist": "^1.2.5"
     },
     "devDependencies": {
-        "@types/node": "^13.13.4",
-        "chai": "^4.2.0",
-        "mocha": "^6.2.3",
-        "sinon": "^7.5.0"
+        "@types/he": "^1.1.1",
+        "@types/js-beautify": "^1.13.1",
+        "@types/node": "^13.13.4"
+    },
+    "engines": {
+        "node": ">=12.18.3"
     }
 }

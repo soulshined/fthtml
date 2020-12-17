@@ -1,9 +1,11 @@
 import { char } from "../../../lib/lexer/types";
+import functions from "./functions";
+import macros from "./macros";
 
 abstract class ftHTMLangConfig {
     static stringSymbols: string[] = [`'`, `"`];
     static pragmas: string[] = ['vars', 'end'];
-    static keywords: string[] = ['doctype', 'comment', 'import', 'template'];
+    static keywords: string[] = ['doctype', 'comment', 'import'];
 
     static isWhitespace(ch: char): boolean {
         return !!~[' ', '\r', '\n', '\t'].indexOf(ch);
@@ -34,5 +36,7 @@ export default {
         css: {
             stringSymbols: ftHTMLangConfig.stringSymbols
         }
-    }
+    },
+    functions,
+    macros
 } as const;

@@ -24,7 +24,11 @@ export function isTypeOfAndNotEmpty(aObject: any, expecting: any): boolean {
 }
 
 export function isTypesOfAndNotEmpty(aObject: any, expecting: any): boolean {
-    return aObject.every((e: any) => isTypeOfAndNotEmpty(e, expecting) && e.length > 0);
+    let obj = aObject;
+    if (isTypeOf(aObject, 'object'))
+        obj = Object.values(aObject);
+
+    return obj.every((e: any) => isTypeOfAndNotEmpty(e, expecting) && e.length > 0);
 }
 
 let aTimer = null;

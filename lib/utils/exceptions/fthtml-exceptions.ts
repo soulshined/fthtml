@@ -95,6 +95,36 @@ export class ftHTMLVariableDoesntExistError extends ftHTMLParserError {
     }
 }
 
+export class ftHTMLJSONError extends ftHTMLParserError {
+    constructor(message: string, token: token) {
+        super(message, token);
+    }
+}
+
+export class ftHTMLFunctionError extends ftHTMLParserError {
+    constructor(message: string, token: token) {
+        super(message, token);
+    }
+}
+
+export class ftHTMLIllegalArgumentTypeError extends ftHTMLFunctionError {
+    constructor(arg: any, func: token, actual: token) {
+        super(`Invalid argument type for '${arg.name}' of ${func.value}. Expecting any of: ${arg.type.join(', ')}`, actual);
+    }
+}
+
+export class ftHTMLIllegalArgumentError extends ftHTMLFunctionError {
+    constructor(arg: any, position: number, func: token, actual: token) {
+        super(`Invalid value for ${func.value} argument '${arg.name}' at position ${position + 1}. Expecting any of: ${arg.possibleValues.join(', ')}`, actual);
+    }
+}
+
+export class ftHTMLNotEnoughArgumentsError extends ftHTMLParserError {
+    constructor(func: token, expecting: number, actual: number) {
+        super(`${func.value} requires ${expecting} arguments but ${actual} was given`, func);
+    }
+}
+
 export class ftHTMLImportError extends Error {
     constructor(message: string) {
         super();

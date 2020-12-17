@@ -1,6 +1,6 @@
 {
     "name": "fthtml-cli",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "ftHTML CLI. Command Line Interface for automating ftHTML to HTML conversions",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"

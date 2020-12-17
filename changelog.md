@@ -1,7 +1,37 @@
+# 3.0.0 - Smaragdine Update
+
+  For a complete overview of this update see https://fthtml.com/changelog/#Smaragdine
+
+  - Breaking changes
+    * Removed the `template` keyword since deprecation.
+      - Templates syntax has changed
+      - Templates directory (`templateDir`) no longer exists for `fthtmlconfig` files
+      - All templates are now handled intuitively by the `import` statement
+    * Updated escaping sequence rules.
+      - `\` are now parsed as is, unless immediately infront of a string delimiter
+  - New Features
+    * Global Variables
+    * Forced relative imports support
+    * ftHTML Blocks for binding properties
+    * Native json support
+    * Functions
+      - Added `addslashes`, `choose`, `html_encode`, `html_decode`, `random`, `replace`, `str_repeat`, `str_reverse`, `str_format`, `substring`, `tcase`, `trim`
+    * Macros
+      - Added `__DATE__`, `__DATETIME__`, `__ISO_DATE__`, `__LOCAL_DATE__`, `__LOCAL_DATETIME__`, `__NOW__`, `__UUID__`, `__JS_AGENT__`, `__JS_URI__`, `___JS_URI_HASH_`, `__JS_URI__HOSTNAME_`, `__JS_URI_HOST__`, `__JS_URI_PORT__`, `__JS_URI_PATH__`, `__JS_URI_PROTOCOL__`, `__JS_URI_SEARCH__`
+    * Variables as property binding values are now supported without needing string interpolation
+  - fthtmlconfig
+    * Added `globalvars` property support
+    * Added `jsonDir` property support
+    * Added `prettify` property support
+
+
+
 # 2.1.5
   - This release deprecates the 'template' keyword as it conflicts with a native html tag, preparring for future release.
   - Fixed issue where variables would fail in some instances as child elements
   - Removed php from supported embedded languages
+
+
 
 # 2.1.0 - Parser Redone & Typescript & CLI enhancements
   - Parser redone from ground up

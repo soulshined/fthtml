@@ -69,8 +69,11 @@ export class ftHTMLexer {
             while (!input.eof()) {
                 const ch = input.next();
                 if (isEscaped) {
-                    buffer += ch;
-                    isEscaped = false;
+                    if (ch !== '\\') {
+                        buffer += escapedBy === ch ? ch : `\\${ch}`;
+                        isEscaped = false;
+                    }
+                    else buffer += ch
                 }
                 else if (ch === '\\') isEscaped = true;
                 else if (ch === escapedBy) {

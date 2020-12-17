@@ -6,6 +6,8 @@ export const enum TOKEN_TYPE {
     ATTR_ID = 'Attr_Id',
     ELANG = 'ELang',
     ELANGB = 'ElangB',
+    FUNCTION = 'Function',
+    MACRO = 'Macro',
     KEYWORD = 'Keyword',
     KEYWORD_DOCTYPE = 'Keyword_Doctype',
     PRAGMA = 'Pragma',
@@ -47,6 +49,8 @@ export function getTokenTypeForIdentifier(identifier: string):
     TOKEN_TYPE.KEYWORD_DOCTYPE |
     TOKEN_TYPE.KEYWORD |
     TOKEN_TYPE.ELANG |
+    TOKEN_TYPE.FUNCTION |
+    TOKEN_TYPE.MACRO |
     TOKEN_TYPE.PRAGMA |
     TOKEN_TYPE.WORD |
     TOKEN_TYPE.ATTR_ID {
@@ -56,5 +60,7 @@ export function getTokenTypeForIdentifier(identifier: string):
     }
     else if (ftHTMLGrammar.elangs[identifier]) return TOKEN_TYPE.ELANG;
     else if (~ftHTMLGrammar.pragmas.indexOf(identifier)) return TOKEN_TYPE.PRAGMA;
+    else if (ftHTMLGrammar.functions[identifier]) return TOKEN_TYPE.FUNCTION;
+    else if (ftHTMLGrammar.macros[identifier]) return TOKEN_TYPE.MACRO;
     else return TOKEN_TYPE.WORD;
 }
