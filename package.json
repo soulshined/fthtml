@@ -1,7 +1,7 @@
 {
     "name": "fthtml",
     "displayName": "ftHTML",
-    "version": "3.0.0",
+    "version": "3.1.0",
     "description": "An HTML preprocesser built to cut down on special characters/tags and typing. Incorporates importing other .ftHTML files, basic variables and is not whitespace specific. Includes a CLI",
     "categories": [
         "Programming Languages",
@@ -40,7 +40,8 @@
         "test:variables": "cd ../fthtml_dev && npm run test:variables",
         "test:string-interpolation": "cd ../fthtml_dev && npm run test:string-interpolation",
         "test:self-closing-tags": "cd ../fthtml_dev && npm run test:self-closing-tags",
-        "test:strings": "cd ../fthtml_dev && npm run test:strings"
+        "test:strings": "cd ../fthtml_dev && npm run test:strings",
+        "test:tinyts": "cd ../fthtml_dev && npm run test:tinyts"
     },
     "dependencies": {
         "glob": "^7.1.6",

@@ -19,10 +19,13 @@ import {
     ftHTMLParserError,
     ftHTMLVariableDoesntExistError,
     StackTrace,
-    ftHTMLFunctionError
+    ftHTMLFunctionError,
+    ftHTMLInvalidTinyTemplateNameError,
+    ftHTMLInvalidTinyTemplatePlaceholderError
 } from "../utils/exceptions/index";
 import * as _ from "../utils/functions";
 import { SELF_CLOSING_TAGS } from "../utils/self-closing-tags";
+import { TinyTemplate } from './models';
 
 function ParserVariables(vars) {
     let variables = vars || {};
@@ -42,6 +45,7 @@ function ParserVariables(vars) {
 export class ftHTMLParser {
     private input: TokenStream;
     private vars;
+    private tinytemplates = {};
     constructor(vars?) {
         this.vars = ParserVariables(vars);
     }
@@ -51,13 +55,13 @@ export class ftHTMLParser {
     }
     renderFile(file: string) {
         if (file.startsWith('https:') || file.startsWith('http:'))
-            throw new ftHTMLImportError(`Files must be local, can not access '${file}'`);
+            throw new ftHTMLImportError(`Files must be local, can not access '${file}'`, null, this.vars._$.__filename);
 
         try {
             file = path.resolve(`${file}.fthtml`);
 
             if (!fs.existsSync(file))
-                throw new ftHTMLImportError(`Can not find file '${file}' to parse`);
+                throw new ftHTMLImportError(`Can not find file '${file}' to parse`, null, this.vars._$.__filename);
 
             this.vars._$.__dir = path.dirname(file);
             this.vars._$.__filename = file;
@@ -71,6 +75,12 @@ export class ftHTMLParser {
         } catch (error) {
             throw error;
         }
+    }
+
+    private compileTinyTemplate(src: string) {
+        const parser = new ftHTMLParser();
+        parser.parse(ftHTMLexer.TokenStream(InputStream(src)));
+        return parser.tinytemplates;
     }
 
     private parse(input: TokenStream): string {
@@ -100,7 +110,9 @@ export class ftHTMLParser {
             if (endingtype && this.isExpectedType(t, endingtype)) return onendingtype(html, false);
             if (!types.includes(t.type)) throw new ftHTMLInvalidTypeError(t, '');
 
-            if (t.type == TT.WORD) html += this.parseTag();
+            if (this.isExpectedType(t, TT.WORD) && (this.tinytemplates[t.value] !== undefined || uconfig.tinytemplates[t.value] !== undefined))
+                html += this.parseTinyTemplate();
+            else if (t.type == TT.WORD) html += this.parseTag();
             else if (t.type == TT.STRING) html += this.parseString(this.consume());
             else if (t.type == TT.VARIABLE) html += this.parseVariable(this.consume());
             else if (t.type == TT.ELANG) html += this.parseElang();
@@ -205,7 +217,7 @@ export class ftHTMLParser {
                     const [_, json_file] = parsed;
 
                     if (json_file.value.startsWith('https:') || json_file.value.startsWith('http:'))
-                        throw new ftHTMLImportError(`Files must be local, can not access '${json_file.value}'`);
+                        throw new ftHTMLImportError(`Files must be local, can not access '${json_file.value}'`, json_file);
 
                     let dir = uconfig.jsonDir ?? this.vars._$.__dir;
                     if (json_file.value.startsWith('&')) {
@@ -228,7 +240,69 @@ export class ftHTMLParser {
                 else throw new ftHTMLInvalidTypeError(peek, 'string or ftHTML block values');
             } while (!this.input.eof());
 
-            throw new ftHTMLIncompleteElementError(pragma, `Expecting '#end' pragma keyword for starting pragma '${pragma.value}' but none found`, pragma);
+            throw new ftHTMLIncompleteElementError(pragma, `an '#end' pragma keyword for starting pragma '${pragma.value}' but none found`, pragma);
+        }
+        else if (pragma.value.endsWith('templates')) {
+            do {
+                const tinytempl = this.consume();
+                if (this.isExpectedType(tinytempl, 'Pragma_end')) return;
+                if (tinytempl.type !== TT.WORD)
+                    throw new ftHTMLInvalidTinyTemplateNameError(tinytempl, "[\w-]+", this.vars._$.__filename);
+
+                if (this.isEOF())
+                    throw new ftHTMLIncompleteElementError(tinytempl, 'a string or single ftHTML element');
+
+                const element = this.consume();
+                if (!this.isOneOfExpectedTypes(element, [TT.WORD, TT.STRING]))
+                    throw new ftHTMLInvalidTypeError(element, 'a string or single ftHTML element');
+
+                if (this.isExpectedType(element, TT.STRING)) {
+                    this.tinytemplates[tinytempl.value] = TinyTemplate(element, this.vars._$.__filename);
+                    continue;
+                }
+
+                if (this.isEOF())
+                    throw new ftHTMLIncompleteElementError(pragma, `an '#end' pragma keyword for starting pragma '${pragma.value}' but none found`);
+
+                const peek = this.peek();
+                if (this.isExpectedType(peek, 'Pragma_end')) {
+                    this.tinytemplates[tinytempl.value] = TinyTemplate({
+                        type: TT.STRING,
+                        value: '${val}',
+                        position: element.position
+                    }, this.vars._$.__filename, element);
+                    continue;
+                }
+
+                if (this.isExpectedType(peek, TT.STRING)) {
+                    this.tinytemplates[tinytempl.value] = TinyTemplate(this.consume(), this.vars._$.__filename, element);
+                }
+                else if (this.isExpectedType(peek, 'Symbol_(')) {
+                    const parenth = this.consume();
+                    if (this.isEOF())
+                        throw new ftHTMLIncompleteElementError(element, 'closing and opening parenthesis');
+
+                    const attrs = this.parseAttributes(parenth);
+
+                    let value;
+                    if (this.isExpectedType(this.peek(), TT.STRING))
+                        value = this.consume();
+                    else if (!this.isExpectedType(this.peek(), TT.WORD) && !this.isExpectedType(this.peek(), 'Pragma_end'))
+                        throw new ftHTMLInvalidTypeError(element, 'a string or single ftHTML element');
+
+                    this.tinytemplates[tinytempl.value] = TinyTemplate(value ?? {
+                        type: TT.STRING,
+                        value: '${val}',
+                        position: element.position
+                    }, this.vars._$.__filename, element, attrs);
+                }
+                else if (this.isExpectedType(peek, TT.WORD))
+                    this.tinytemplates[tinytempl.value] = TinyTemplate(element, this.vars._$.__filename);
+                else
+                    throw new ftHTMLInvalidTypeError(element, 'a string or single ftHTML element');
+            } while (!this.isEOF());
+
+            throw new ftHTMLIncompleteElementError(pragma, `an '#end' pragma keyword for starting pragma '${pragma.value}' but none found`);
         }
         else throw new ftHTMLInvalidKeywordError(pragma);
     }
@@ -377,6 +451,44 @@ export class ftHTMLParser {
         throw new ftHTMLInvalidTypeError(brace, `an opening and closing braces for template imports`);
     }
 
+    private parseTinyTemplate(): string {
+        const word = this.consume();
+        const uconfigtt = uconfig.tinytemplates[word.value];
+        const tt = this.tinytemplates[word.value] || uconfigtt;
+
+        let { element, attrs, value } = tt;
+
+        if (uconfigtt !== undefined) {
+            try {
+                const tts = this.compileTinyTemplate(`#templates ${word.value} ${value.value} #end`);
+
+                value = tts[word.value].value;
+                element = tts[word.value].element;
+                attrs = tts[word.value].attrs;
+            }
+            catch (error) { }
+        }
+
+        let result = value.value;
+        const placeholders = _.getAllMatches(result, /(?<!\\)(\${[ ]*val[ ]*})/g);
+        if (placeholders.length === 0)
+            throw new ftHTMLInvalidTinyTemplatePlaceholderError(word, this.vars._$.__filename);
+
+        let replacement = '';
+        if (this.isExpectedType(this.peek(), 'Symbol_{'))
+            replacement = this.parseBindingPropertyValueAsFTHTML();
+        else if (this.isOneOfExpectedTypes(this.peek(), [TT.STRING, TT.MACRO, TT.FUNCTION, TT.VARIABLE])) {
+            replacement = this.parseWhileType([TT.STRING, TT.MACRO, TT.FUNCTION, TT.VARIABLE], null, null, 1);
+        }
+
+        placeholders.forEach(() => result = result.replace(/(?<!\\)(\${[ ]*val[ ]*})/g, replacement));
+
+        result = this.parseString({ type: TT.STRING, value: result, position: word.position })
+        return element
+            ? this.createElement(this.evaluateENForToken(element), attrs, result)
+            : result;
+    }
+
     private parseBindingPropertyValueAsFTHTML(): string {
         const brace = this.consume();
         return this.parseWhileType([TT.WORD, TT.ELANG, TT.STRING, TT.KEYWORD, TT.VARIABLE, TT.FUNCTION, TT.MACRO], 'Symbol_}', (html: string, error: boolean) => {
@@ -506,10 +618,8 @@ export class ftHTMLParser {
         return token.value;
     }
 
-    private initElementWithAttrs(tag: string): string {
-        const t = this.consume();
-        if (this.input.eof()) throw new ftHTMLIncompleteElementError(t, 'opening and closing braces');
-
+    private parseAttributes(parenthesis: token): object {
+        //assumes beginning parenthesis has already been consumed
         const attrs = {
             misc: '',
             classes: [],
@@ -523,18 +633,8 @@ export class ftHTMLParser {
 
         do {
             const t = this.consume();
-            let peek = this.peek();
 
-            if (t.type == TT.SYMBOL && t.value == ')') {
-                if (SELF_CLOSING_TAGS.includes(tag)) return this.createElement(tag, attrs);
-
-                if (this.isExpectedType(peek, 'Symbol_{')) return this.initElementWithChildren(tag, attrs);
-                else if (this.isExpectedType(peek, TT.STRING)) return this.createElement(tag, attrs, this.parseString(this.consume()));
-                else if (this.isExpectedType(peek, TT.VARIABLE)) return this.createElement(tag, attrs, this.parseVariable(this.consume()));
-                else if (this.isExpectedType(peek, TT.FUNCTION)) return this.createElement(tag, attrs, this.parseFunction());
-                else if (this.isExpectedType(peek, TT.MACRO)) return this.createElement(tag, attrs, this.parseMacro());
-                else return this.createElement(tag, attrs);
-            }
+            if (this.isExpectedType(t, 'Symbol_)')) return attrs;
 
             if (![TT.WORD, TT.ATTR_CLASS, TT.ATTR_CLASS_VAR, TT.ATTR_ID, TT.VARIABLE].includes(t.type)) throw new ftHTMLInvalidTypeError(t, 'an attribute selector, identifier or word');
 
@@ -546,6 +646,7 @@ export class ftHTMLParser {
             }
             else if (t.type == TT.VARIABLE) attrs.misc += ` ${this.parseVariable(t)}`;
             else {
+                let peek = this.peek();
                 if (this.isExpectedType(peek, 'Symbol_=')) {
                     this.consume();
                     peek = this.peek();
@@ -561,7 +662,26 @@ export class ftHTMLParser {
             }
         } while (!this.input.eof());
 
-        throw new ftHTMLIncompleteElementError(t, 'opening and closing braces');
+        throw new ftHTMLIncompleteElementError(parenthesis, 'opening and closing braces');
+    }
+
+    private initElementWithAttrs(tag: string): string {
+        const t = this.consume();
+        if (this.input.eof()) throw new ftHTMLIncompleteElementError(t, 'opening and closing braces');
+
+        const attrs = this.parseAttributes(t);
+
+        if (this.isEOF() || SELF_CLOSING_TAGS.includes(tag))
+            return this.createElement(tag, attrs);
+
+        const peek = this.peek();
+
+        if (this.isExpectedType(peek, 'Symbol_{')) return this.initElementWithChildren(tag, attrs);
+        else if (this.isExpectedType(peek, TT.STRING)) return this.createElement(tag, attrs, this.parseString(this.consume()));
+        else if (this.isExpectedType(peek, TT.VARIABLE)) return this.createElement(tag, attrs, this.parseVariable(this.consume()));
+        else if (this.isExpectedType(peek, TT.FUNCTION)) return this.createElement(tag, attrs, this.parseFunction());
+        else if (this.isExpectedType(peek, TT.MACRO)) return this.createElement(tag, attrs, this.parseMacro());
+        else return this.createElement(tag, attrs);
     }
 
     private initElementWithChildren(tag: string, attrs?: object): string {
