@@ -4,7 +4,7 @@ import macros from "./macros";
 
 abstract class ftHTMLangConfig {
     static stringSymbols: string[] = [`'`, `"`];
-    static pragmas: string[] = ['vars', 'end'];
+    static pragmas: string[] = ['vars', 'tinytemplates', 'templates', 'end'];
     static keywords: string[] = ['doctype', 'comment', 'import'];
 
     static isWhitespace(ch: char): boolean {

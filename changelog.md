@@ -11,6 +11,46 @@
       - `\` are now parsed as is, unless immediately infront of a string delimiter
   - New Features
     * Global Variables
+    * Tiny Templates (and global tiny templates)
+      - Cascade style overwrites
+      - Templates that are 'tiny' and specifically intended for tag aliases. For example, if you
+      create the same element over and over with the same attributes, let's say, an inline code highlighter:
+
+      ```
+      code(.code-inline data-lang=shell) "> foo bar ./"
+      ```
+
+      You can now make tiny templates that give this a specific element name to call and that converts at runtime:
+
+      ```
+      #tinytemplates
+        shell code(.code-inline data-lang=shell) "${val}"
+      #end
+
+      html {
+        body {
+          h1 "Hello World"
+          p "To import:"
+          shell "> foo bar ./"
+          p "To export"
+          shell "> foo bar ./ --destination ../out"
+        }
+      }
+      ```
+
+      Which outputs the following html:
+      ```
+      <html>
+        <body>
+          <h1>Hello World</h1>
+          <p>To import:</p>
+          <code class="code-inline" data-lang="shell">> foo bar ./</code>
+          <p>To export:</p>
+          <code class="code-inline" data-lang="shell">> foo bar ./ --destination ../out</code>
+        </body>
+      </html>
+      ```
+
     * Forced relative imports support
     * ftHTML Blocks for binding properties
     * Native json support
@@ -23,6 +63,10 @@
     * Added `globalvars` property support
     * Added `jsonDir` property support
     * Added `prettify` property support
+    * Added `globaltemplates` property support
+      - supports fthtml syntax
+    * Added `extend` property support
+      - extend another local fthtmlconfig file
 
 
 

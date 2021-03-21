@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs");
+const exceptions_1 = require("../../lib/utils/exceptions");
 function fileExists(file) {
     try {
         return fs.existsSync(file);
@@ -10,11 +11,47 @@ function fileExists(file) {
     }
 }
 exports.fileExists = fileExists;
-function getJSONFromFile(file) {
-    if (fileExists(file))
-        return JSON.parse(fs.readFileSync(file, 'utf8'));
-    else
+function getJSONFromFile(file, extendLocation, inContent, parent) {
+    if (!fileExists(file) || !file.endsWith('.json')) {
+        if (extendLocation) {
+            let isInExtend = false;
+            let line = 0;
+            let col = 0;
+            const lines = inContent.split("\n");
+            for (let i = 0; i < lines.length; ++i) {
+                if (isInExtend) {
+                    if (lines[i].trim() === `"${extendLocation}"`) {
+                        line = i;
+                        col = lines[i].indexOf(`"${extendLocation}"`);
+                        break;
+                    }
+                }
+                else if (lines[i].trim().startsWith('"extend"')) {
+                    isInExtend = true;
+                }
+            }
+            throw new exceptions_1.ftHTMLImportError(`JSON file '${file}' doesn't exist or isn't compatible`, {
+                type: "Keyword",
+                value: 'extend',
+                position: {
+                    line: line + 1,
+                    column: col + 1
+                }
+            }, parent);
+        }
         return null;
+    }
+    try {
+        const content = fs.readFileSync(file, 'utf8');
+        return {
+            origin: file,
+            content,
+            json: JSON.parse(content)
+        };
+    }
+    catch (error) {
+        return null;
+    }
 }
 exports.getJSONFromFile = getJSONFromFile;
 function isTypeOf(aObject, expecting) {

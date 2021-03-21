@@ -1,22 +1,71 @@
 import * as _ from "./frequent";
 import * as path from "path";
 import { default as macros } from "../../lib/lexer/grammar/macros";
+import functions from "../../lib/lexer/grammar/functions";
+import { TinyTemplate } from "../../lib/parser/models";
 
 const fthtmlconfig = path.resolve(process.cwd(), 'fthtmlconfig.json');
 
 const config = {
     rootDir: <string>null,
     keepTreeStructure: <boolean>false,
+    extends: <string[]>[],
     excluded: <string[]>[],
     importDir: <string>null,
     exportDir: <string>null,
     jsonDir: <string>null,
     prettify: <boolean>false,
-    globalvars: {}
+    globalvars: {},
+    tinytemplates: {}
 }
 
-if (_.fileExists(fthtmlconfig)) {
-    const parsed = _.getJSONFromFile(fthtmlconfig);
+function setGlobalVars(json) {
+    Object.keys(json['globalvars']).forEach(gvar => {
+        if (macros[gvar] !== undefined || functions[gvar] !== undefined || !_.isTypeOf(json['globalvars'][gvar], 'string'))
+            return;
+
+        config.globalvars[gvar] = json['globalvars'][gvar];
+    })
+}
+
+function setGlobalTinyTemplates(json, origin) {
+    Object.keys(json['globalTinyTemplates']).forEach(val => {
+        if (macros[val] !== undefined || functions[val] !== undefined || !_.isTypeOf(json['globalTinyTemplates'][val], 'string'))
+            return;
+
+        config.tinytemplates[val] = TinyTemplate({
+                // @ts-ignore
+                type: 'String',
+                value: json['globalTinyTemplates'][val]
+            }, null, null, origin)
+    })
+}
+
+let file = _.getJSONFromFile(fthtmlconfig);
+if (file !== null) {
+    const { json: parsed, content } = file;
+
+    //extends
+    if (parsed['extend']) {
+        const exts = parsed.extend;
+        for (const ext of exts) {
+            if (!_.isTypeOf(ext, 'string') || ext.startsWith("http"))
+                continue;
+
+            const location = path.isAbsolute(ext) ? ext : path.resolve(ext);
+            const file = _.getJSONFromFile(location, ext, content, fthtmlconfig);
+            if (file === null) continue;
+            const { json } = file;
+            config.extends.push(location);
+
+            if (json['globalvars']) setGlobalVars(json);
+            if (json['globalTinyTemplates']) setGlobalTinyTemplates(json, location);
+            if (json['excluded']) config.excluded.push(...json.excluded);
+            if (json['importDir']) config.importDir = path.resolve(json.importDir);
+            if (json['exportDir']) config.exportDir = path.resolve(json.exportDir);
+            if (json['jsonDir']) config.jsonDir = path.resolve(json.jsonDir);
+        }
+    }
 
     //rootDir
     if (_.isTypeOfAndNotEmpty(parsed.rootDir, 'string'))
@@ -33,7 +82,7 @@ if (_.fileExists(fthtmlconfig)) {
     //excluded
     if (Array.isArray(parsed.excluded)) {
         if (_.isTypesOfAndNotEmpty(parsed.excluded, 'string'))
-            config.excluded = parsed.excluded;
+            config.excluded.push(...parsed.excluded);
     }
 
     //importDir
@@ -49,15 +98,13 @@ if (_.fileExists(fthtmlconfig)) {
         config.exportDir = path.resolve(parsed.exportDir);
 
     //global vars
-    if (_.isTypeOf(parsed.globalvars, 'object')) {
-        if (_.isTypesOfAndNotEmpty(parsed.globalvars, 'string'))
-            config.globalvars = parsed.globalvars;
+    if (_.isTypeOf(parsed.globalvars, 'object'))
+        setGlobalVars(parsed);
 
-        Object.keys(config.globalvars).forEach(gvar => {
-            if (macros[gvar] !== undefined)
-                delete config.globalvars[gvar]
-        })
-    }
+    //global tinytemplates
+    if (_.isTypeOf(parsed.globalTinyTemplates, 'object'))
+        setGlobalTinyTemplates(parsed, fthtmlconfig);
 }
 
+config.excluded = Array.from(new Set(config.excluded));
 export default config;

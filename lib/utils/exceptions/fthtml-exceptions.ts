@@ -89,6 +89,24 @@ export class ftHTMLInvalidVariableNameError extends ftHTMLParserError {
     }
 }
 
+export class ftHTMLInvalidTinyTemplateNameError extends ftHTMLParserError {
+    public origin: string;
+
+    constructor(token: token, expecting: string, origin: string) {
+        super(`Invalid template name '${token.value}', when declaring a tiny template the word can not be a reserved keyword and the following pattern should be honored: ${expecting}`, token);
+        this.origin = origin;
+    }
+}
+
+export class ftHTMLInvalidTinyTemplatePlaceholderError extends ftHTMLParserError {
+    public origin: string;
+
+    constructor(token: token, origin: string) {
+        super(`Tiny templates require, at minimum, 1 literal placeholder of '\${val}', where one isn't implicitly provided`, token);
+        this.origin = origin;
+    }
+}
+
 export class ftHTMLVariableDoesntExistError extends ftHTMLParserError {
     constructor(token: token) {
         super(`The variable '${token.value}' has not been declared`, token);
@@ -126,10 +144,19 @@ export class ftHTMLNotEnoughArgumentsError extends ftHTMLParserError {
 }
 
 export class ftHTMLImportError extends Error {
-    constructor(message: string) {
+    public position: errortokenposition;
+
+    constructor(message: string, token?: token, parentFile?: string) {
         super();
         this.name = this.constructor.name;
 
+        if (parentFile && parentFile !== '')
+            StackTrace.add(parentFile);
+
+        if (token) {
+            this.position = ErrorTokenPosition(token.position.line, token.position.column, token.position.column + (token.value ? token.value.length : 0));
+            StackTrace.updatePosition(0, token.position);
+        }
         this.message = `${message}
     ${StackTrace.toString()}`
     }
