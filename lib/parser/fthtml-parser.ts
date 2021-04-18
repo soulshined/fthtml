@@ -486,7 +486,13 @@ export class ftHTMLParser {
         }
         else if (_.isExpectedType(pragma.token, 'Pragma_ifdef')) {
             const result = FTHTMLElement(pragma.token);
-            const value = this.parseTypesInOrder([[TT.WORD]], pragma.token)[0];
+
+            this.throwIfEOF(new ftHTMLIncompleteElementError(pragma.token, 'a varibale, or alias, name'));
+
+            if (!_.isExpectedType(this.peek(), TT.WORD))
+                throw new ftHTMLInvalidTypeError(this.peek(), 'a varibale, or alias, name');
+
+            const value = FTHTMLElement(this.consume());
             result.childrenStart = value.token.position;
             const prevState = this.shouldOmit;
             const shouldOmit = this.vars[value.token.value] === undefined &&
