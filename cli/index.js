@@ -7,8 +7,8 @@ const convert_1 = require("./cmds/convert");
 const error_1 = require("./utils/error");
 function cli() {
     const args = minimist(process.argv.slice(2), {
-        string: ['covert', 'dest'],
-        boolean: ['version', 'keep-tree', 'test'],
+        string: ['covert', 'dest', 'config'],
+        boolean: ['version', 'keep-tree', 'test', 'debug'],
         alias: {
             d: 'dest', e: 'exclude',
             k: 'keep-tree',
@@ -39,3 +39,4 @@ function cli() {
     }
 }
 exports.default = cli();
+//# sourceMappingURL=index.js.map

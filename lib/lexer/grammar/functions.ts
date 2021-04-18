@@ -1,5 +1,8 @@
 import { funcrules, TOKEN_TYPE as TT } from "../../../lib/lexer/types";
 import { decode, encode } from "he";
+import * as _ from "../../utils/functions";
+import { isTypeOf } from "../../../cli/utils/frequent";
+import { StringFormatter } from "./functions/str_format";
 
 const func = (argsSequenceStrict: boolean, argPatterns: {
     type: TT[];
@@ -8,11 +11,21 @@ const func = (argsSequenceStrict: boolean, argPatterns: {
     isRestParameter?: boolean;
     isOptional?: boolean;
     default?: any;
-}[], func: (...values: any[]) => { value: any, error: boolean, msg?: string }): funcrules => {
+}[], func: (...values: any[]) => { value: any, error: boolean, msg?: string }, returnTokenTypes: boolean = false, useRawVariables: boolean = false): funcrules => {
     return {
         argsSequenceStrict,
         argPatterns,
-        do: func
+        do: func,
+        returnTokenTypes,
+        useRawVariables,
+    }
+}
+
+const funcresult = (value: any, error: boolean = false, msg?: string) => {
+    return {
+        value,
+        error,
+        msg
     }
 }
 
@@ -37,14 +50,38 @@ const functions: { [key: string]: funcrules } = {
     ], (html: string) => {
         return { value: decode(`${html}`), error: false };
     }),
+    join: func(true, [
+        { type: [TT.VARIABLE], name: 'value' },
+        { type: [TT.STRING, TT.VARIABLE], name: 'delimiter', isOptional: true, default: ', ' }
+    ], (value: any, delimiter: string) => {
+        delimiter = delimiter ?? ', ';
+        if (Array.isArray(value))
+            return funcresult(value.join(delimiter))
+        else if (isTypeOf(value, 'object') && value.constructor === Object)
+            return funcresult(Object.keys(value).join(delimiter))
+
+        return funcresult(value, true, 'Value is not iterable');
+    }, false, true),
+    len: func(false, [
+        { type: [TT.STRING, TT.VARIABLE, TT.FUNCTION, TT.WORD], name: 'value' }
+    ], (entry: any) => {
+        if (entry[1] === TT.VARIABLE && !isTypeOf(entry[0], 'string')) {
+            if (Array.isArray(entry[0]))
+                return funcresult(entry[0].length);
+            if (isTypeOf(entry[0], 'object') && entry[0].constructor === Object)
+                return funcresult(Object.keys(entry[0]).length);
+        }
+
+        return funcresult(`${entry[0]}`.length);
+    }, true, true),
     random: func(false, [
         { type: [TT.STRING, TT.VARIABLE, TT.WORD, TT.FUNCTION], name: 'min' },
         { type: [TT.STRING, TT.VARIABLE, TT.WORD, TT.FUNCTION], name: 'max' }
     ], (min: number, max: number) => {
-        if (!Number.isSafeInteger(+min))
+        if (!_.isInteger(min))
             return { value: min, error: true, msg: 'Min range value is not a valid number' };
 
-        if (!Number.isSafeInteger(+max))
+        if (!_.isInteger(max))
             return { value: max, error: true, msg: 'Max range value is not a valid number' };
 
         min = +min, max = +max;
@@ -74,7 +111,7 @@ const functions: { [key: string]: funcrules } = {
     ], (value: string, quantity: number) => {
         value = `${value}`;
 
-        if (!Number.isSafeInteger(+quantity))
+        if (!_.isInteger(quantity))
             return { value, error: true, msg: 'Repeat quantity is not a valid number' };
 
         return { value: value.repeat(Math.max(+quantity + 1, 1)), error: false };
@@ -84,50 +121,18 @@ const functions: { [key: string]: funcrules } = {
     ], (value: string) => {
         return { value: (`${value}`).split('').reverse().join(''), error: false };
     }),
+    str_split: func(true, [
+        { type: [TT.STRING, TT.VARIABLE, TT.MACRO, TT.FUNCTION], name: 'value' },
+        { type: [TT.STRING, TT.VARIABLE], name: 'delimiter' }
+    ], (value: string, delimiter: string) => {
+        return { value: `${value}`.split(delimiter), error: false };
+    }),
     str_format: func(true, [
         { type: [TT.STRING, TT.VARIABLE, TT.FUNCTION], name: 'value' },
-        { type: [TT.STRING], name: 'style', possibleValues: ['currency', 'number', 'unit', 'percent', 'decimal'] },
+        { type: [TT.STRING], name: 'style', possibleValues: ['currency', 'number', 'unit', 'percent', 'decimal', 'date'] },
         { type: [TT.STRING], name: 'options', isOptional: true }
     ], (value: number, formattype: string, opts = '') => {
-        if (Number.isNaN(+value))
-            return { value, error: true, msg: `Value '${value}' is not a number` };
-
-        value = +value;
-        try {
-            opts = opts.split(",")
-                .map(m => {
-                    if (m.trim() === '') return;
-                    let split = m.split(':');
-                    if (split.length < 2) return;
-                    if (!split[0].startsWith('"') && !split[0].endsWith('"'))
-                        split[0] = `\"${split[0].trim()}\"`;
-                    if (!split[1].startsWith('"') && !split[1].endsWith('"'))
-                        split[1] = `\"${split[1].trim()}\"`;
-
-                    return split.join(":");
-                });
-
-            opts = JSON.parse(`{${opts}}`);
-        } catch (error) {
-            return { value, error: true, msg: error.message };
-        }
-        opts['style'] = formattype.toLowerCase();
-        opts['locale'] = opts['locale'] || 'en-US';
-
-        switch (formattype.toLowerCase()) {
-            case 'currency':
-                opts['currency'] = opts['currency'] || 'USD';
-                break;
-            case 'number':
-                delete opts['style'];
-                break;
-        }
-
-        try {
-            return { value: Intl.NumberFormat([opts.locale, 'en-US'], opts).format(value), error: false };
-        } catch (error) {
-            return { value, error: true, msg: error.message };
-        }
+        return StringFormatter.format(value, formattype, opts);
     }),
     substring: func(true, [
         { type: [TT.STRING, TT.VARIABLE, TT.FUNCTION, TT.MACRO], name: 'value' },
@@ -136,10 +141,10 @@ const functions: { [key: string]: funcrules } = {
     ], (value: string, start: number, end: number) => {
         value = String.raw`${value}`;
 
-        if (!Number.isSafeInteger(+start))
+        if (!_.isInteger(start))
             return { value: start, error: true, msg: 'Start range value is not a valid number' };
 
-        if (!Number.isSafeInteger(+end))
+        if (!_.isInteger(end))
             end = value.length;
 
         start = +start, end = +end;

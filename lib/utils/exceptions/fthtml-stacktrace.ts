@@ -17,6 +17,9 @@ type Trace = {
 }
 
 export default class Stack {
+    static clear() {
+        traces = [];
+    }
     static add(file: string, action?: string) {
         traces.unshift(Trace(action || null, null, file));
     }

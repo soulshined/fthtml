@@ -8,10 +8,23 @@ const _ = require("../utils/frequent");
 const user_config_1 = require("../utils/user-config");
 const glob = require("glob");
 const js_beautify_1 = require("js-beautify");
+const user_config_helper_1 = require("../utils/user-config-helper");
 let root;
 function default_1(args) {
     var _a, _b, _c;
+    if (args.c) {
+        let filepath = args.c;
+        if (!path.isAbsolute(filepath)) {
+            filepath = path.resolve(args.c);
+        }
+        const argConfig = user_config_helper_1.default(filepath);
+        if (argConfig.fileExists)
+            user_config_helper_1.merge(user_config_1.default, argConfig.configs);
+    }
+    user_config_1.default.isdebug = user_config_1.default.isdebug || args.debug;
     let dest = (_a = user_config_1.default.exportDir, (_a !== null && _a !== void 0 ? _a : (_b = args.d, (_b !== null && _b !== void 0 ? _b : ''))));
+    if (user_config_1.default.isdebug)
+        console.log("fthtmlconfig =>", user_config_1.default);
     try {
         root = (_c = user_config_1.default.rootDir, (_c !== null && _c !== void 0 ? _c : path.resolve(args._[1] || './')));
         if (!user_config_1.default.exportDir && args.d) {
@@ -113,3 +126,4 @@ function beautify(html) {
         preserve_newlines: true
     });
 }
+//# sourceMappingURL=convert.js.map

@@ -6,8 +6,8 @@ import { default as error } from "./utils/error";
 
 function cli() {
     const args = minimist(process.argv.slice(2), {
-        string: ['covert', 'dest'],
-        boolean: ['version', 'keep-tree', 'test'],
+        string: ['covert', 'dest', 'config'],
+        boolean: ['version', 'keep-tree', 'test', 'debug'],
         alias: {
             d: 'dest', e: 'exclude',
             k: 'keep-tree',

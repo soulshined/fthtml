@@ -3,14 +3,29 @@ import * as path from 'path';
 import * as ftHTML from "../../lib/index";
 import { default as error } from "../utils/error";
 import * as _ from "../utils/frequent";
-import { default as uconfig } from "../utils/user-config";
+import uconfig from "../utils/user-config";
 import * as glob from "glob";
 import { html_beautify } from "js-beautify";
+import parseFTHTMLConfig, { merge } from "../utils/user-config-helper";
 
 let root: string;
 
 export default function (args) {
+    if (args.c) {
+        let filepath = args.c;
+        if (!path.isAbsolute(filepath)) {
+            filepath = path.resolve(args.c);
+        }
+
+        const argConfig = parseFTHTMLConfig(filepath);
+        if (argConfig.fileExists)
+            merge(uconfig, argConfig.configs);
+    }
+    uconfig.isdebug = uconfig.isdebug || args.debug;
     let dest = uconfig.exportDir ?? (args.d ?? '');
+
+    if (uconfig.isdebug)
+        console.log("fthtmlconfig =>", uconfig);
 
     try {
         root = uconfig.rootDir ?? path.resolve(args._[1] || './');

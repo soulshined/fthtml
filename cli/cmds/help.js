@@ -24,3 +24,4 @@ function default_1(args) {
     console.log(menus[cmd] || menus.main);
 }
 exports.default = default_1;
+//# sourceMappingURL=help.js.map

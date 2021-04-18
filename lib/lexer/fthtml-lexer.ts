@@ -1,4 +1,4 @@
-import { ftHTMLInvalidCharError, ftHTMLexerError } from "../utils/exceptions/index";
+import { ftHTMLInvalidCharError, ftHTMLexerError, ftHTMLInvalidTypeError } from "../utils/exceptions/index";
 import {
     char,
     getTokenTypeForIdentifier,
@@ -20,15 +20,18 @@ export class ftHTMLexer {
         let ELANG_MODE: string = null;
         let LM = LEX_MODE.NULL;
         let current: Tokenable = null;
+        let prev: Tokenable = null;
 
         return {
             next,
             peek,
+            previous,
             eof
         }
 
         function tokenize(): Tokenable {
-            readThenOmit();
+            const comment = readThenOmit();
+            if (comment) return comment;
 
             if (input.eof()) return null;
 
@@ -70,7 +73,7 @@ export class ftHTMLexer {
                 const ch = input.next();
                 if (isEscaped) {
                     if (ch !== '\\') {
-                        buffer += escapedBy === ch ? ch : `\\${ch}`;
+                        buffer += `\\${ch}`;
                         isEscaped = false;
                     }
                     else buffer += ch
@@ -85,16 +88,19 @@ export class ftHTMLexer {
             throw new ftHTMLexerError('String not properly formed', startingPos ?? pos);
         }
 
-        function readThenOmit() {
+        function readThenOmit(): Tokenable {
             let buffer = '';
 
             do {
                 buffer = readWhile(ftHTMLGrammar.rules.isWhitespace);
-                buffer += readComments();
+                const comment = readComments();
+                if (comment) return comment;
             } while (!input.eof() && buffer.length > 0);
+
+            return null;
         }
 
-        function readComments(): string {
+        function readComments(): Tokenable {
             const pos = input.position();
             const peek = input.peek();
 
@@ -102,12 +108,12 @@ export class ftHTMLexer {
                 input.next();
                 const peek = input.peek();
 
-                if (peek === '/') return readWhile(ch => ch != '\n');
-                else if (peek === '*') return readBlockComment();
+                if (peek === '/') return Token(TT.COMMENT, `/${readWhile(ch => ch != '\n')}`, pos);
+                else if (peek === '*') return Token(TT.COMMENTB, `/*${readBlockComment()}`, pos);
                 else throw new ftHTMLInvalidCharError('/', pos);
             }
 
-            return '';
+            return null;
         }
 
         function readBlockComment(): string {
@@ -141,6 +147,8 @@ export class ftHTMLexer {
             if (identifier.endsWith('.')) throw new ftHTMLInvalidCharError('.', pos);
 
             const type = getTokenTypeForIdentifier(identifier);
+            if (type === TT.PRAGMA)
+                throw new ftHTMLexerError('Pragma not well-formed, required "#" prefix missing', pos);
 
             if (type === TT.ELANG) {
                 LM = LEX_MODE.ELANG;
@@ -152,7 +160,8 @@ export class ftHTMLexer {
 
         function readString(): token {
             const pos = input.position();
-            return Token(TT.STRING, readEscaped(input.next()), pos);
+            const delimiter = input.next();
+            return Token(TT.STRING, readEscaped(delimiter), pos, delimiter);
         }
 
         function readVariable(): token {
@@ -191,7 +200,7 @@ export class ftHTMLexer {
                         if (--openBraces === 0) {
                             ELANG_MODE = null;
                             buffer = buffer.slice(0, -1);
-                            return Token(TT.ELANGB, buffer, pos);
+                            return Token(TT.ELANGB, buffer, input.position());
                         }
                     }
                     else if (~ftHTMLGrammar.elangs[ELANG_MODE].stringSymbols.indexOf(ch)) {
@@ -260,11 +269,15 @@ export class ftHTMLexer {
 
         function next(): Tokenable {
             let token = current;
+            prev = current;
             current = null;
             return token || tokenize();
         }
         function peek(): Tokenable {
             return current || (current = tokenize());
+        }
+        function previous(): Tokenable {
+            return prev;
         }
         function eof(): boolean {
             return peek() === null;

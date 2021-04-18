@@ -80,3 +80,4 @@ class Timer {
     }
 }
 exports.Timer = Timer;
+//# sourceMappingURL=frequent.js.map

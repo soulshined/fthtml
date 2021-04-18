@@ -46,6 +46,7 @@
         "test:string-interpolation": "cd ../fthtml_dev && npm run test:string-interpolation",
         "test:self-closing-tags": "cd ../fthtml_dev && npm run test:self-closing-tags",
         "test:strings": "cd ../fthtml_dev && npm run test:strings",
+        "test:json": "cd ../fthtml_dev && npm run test:json",
         "test:tinyts": "cd ../fthtml_dev && npm run test:tinyts"
     },
     "dependencies": {

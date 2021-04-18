@@ -1,8 +1,13 @@
 import { ftHTMLParser } from "./parser/fthtml-parser";
+import { HTMLBuilder } from "./utils/html-builder";
 
 export function compile(src: string) {
-    return new ftHTMLParser().compile(src);
+    let html = HTMLBuilder.getDisclaimer();
+    html += new ftHTMLParser().compile(src);
+    return html;
 }
 export function renderFile(file: string) {
-    return new ftHTMLParser().renderFile(file);
+    let html = HTMLBuilder.getDisclaimer();
+    html += new ftHTMLParser().renderFile(file);
+    return html;
 }

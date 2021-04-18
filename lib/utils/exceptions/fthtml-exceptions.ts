@@ -3,8 +3,6 @@ import { char, token, TOKEN_TYPE, tokenposition } from "../../lexer/types";
 
 export { default as StackTrace } from '../exceptions/fthtml-stacktrace'
 
-Error.stackTraceLimit = 0;
-
 const ErrorTokenPosition = function (line: number, start: number, end?: number) {
     return {
         line,
@@ -15,20 +13,33 @@ const ErrorTokenPosition = function (line: number, start: number, end?: number) 
 type errortokenposition = {
     line: number,
     start: number,
-    end?: number
+    end: number
 }
 
-export class ftHTMLexerError extends Error {
+class FTHTMLError extends Error {
     public position: errortokenposition;
 
-    constructor(message: string, position: tokenposition) {
-        super();
+    constructor(message: string, position?: tokenposition) {
+        super(message);
         this.name = this.constructor.name;
-        this.position = ErrorTokenPosition(position.line, position.column);
+        Error.stackTraceLimit = 0;
+        Error.captureStackTrace(this, FTHTMLError);
 
-        StackTrace.updatePosition(0, position);
-        this.message = `${message}
-    ${StackTrace.toString()}`;
+        if (position) {
+            this.position = ErrorTokenPosition(position.line, position.column);
+            StackTrace.updatePosition(0, position);
+        }
+
+        this.stack += `\n    ${StackTrace.toString()}`;
+    }
+
+}
+
+export class ftHTMLexerError extends FTHTMLError {
+    constructor(message: string, position: tokenposition) {
+        super(message, position);
+        this.name = this.constructor.name;
+        this.position.end = position.column + 1;
     }
 }
 
@@ -38,27 +49,22 @@ export class ftHTMLInvalidCharError extends ftHTMLexerError {
     }
 }
 
-export class ftHTMLParserError extends Error {
-    position: errortokenposition;
+export class ftHTMLParserError extends FTHTMLError {
+    expecting?: string | string[];
 
-    constructor(message: string, token: token) {
-        super();
-        this.name = this.constructor.name;
-        this.position = ErrorTokenPosition(token.position.line, token.position.column, token.position.column + (token.value ? token.value.length : 0));
-
-        StackTrace.updatePosition(0, token.position);
-        this.message = `${message}
-    ${StackTrace.toString()}`;
+    constructor(message: string, token: token, expecting?: string | string[]) {
+        super(message, token.position);
+        this.position.end = token.position.column + (token.value ? token.value.length : 1);
+        if (expecting)
+            this.expecting = expecting;
     }
 }
 
 export class ftHTMLInvalidTypeError extends ftHTMLParserError {
-    expecting: string;
     actual: TOKEN_TYPE;
 
     constructor(token: token, expecting?: string) {
-        super(`Invalid type '${token.type}'${expecting ? '. Expecting ' + expecting : ''}`, token);
-        this.expecting = expecting;
+        super(`Invalid type '${token.type}'${expecting ? '. Expecting ' + expecting : ''}`, token, expecting);
         this.actual = token.type;
     }
 }
@@ -66,7 +72,7 @@ export class ftHTMLInvalidTypeError extends ftHTMLParserError {
 export class ftHTMLIncompleteElementError extends ftHTMLParserError {
     actual?: string;
     constructor(token: token, expecting: string, actual?: token) {
-        super(`${token.type} requires ${expecting}`, token);
+        super(`${token.type} requires ${expecting}`, token, expecting);
         this.actual = actual ? actual.value : null;
     }
 }
@@ -120,44 +126,46 @@ export class ftHTMLJSONError extends ftHTMLParserError {
 }
 
 export class ftHTMLFunctionError extends ftHTMLParserError {
-    constructor(message: string, token: token) {
-        super(message, token);
+    constructor(message: string, token: token, expecting?: string[]) {
+        super(message, token, expecting);
     }
 }
 
 export class ftHTMLIllegalArgumentTypeError extends ftHTMLFunctionError {
     constructor(arg: any, func: token, actual: token) {
-        super(`Invalid argument type for '${arg.name}' of ${func.value}. Expecting any of: ${arg.type.join(', ')}`, actual);
+        super(`Invalid argument type for '${arg.name}' of ${func.value}. Expecting any of: ${arg.type.join(', ')}`, actual, arg.type);
     }
 }
 
 export class ftHTMLIllegalArgumentError extends ftHTMLFunctionError {
     constructor(arg: any, position: number, func: token, actual: token) {
-        super(`Invalid value for ${func.value} argument '${arg.name}' at position ${position + 1}. Expecting any of: ${arg.possibleValues.join(', ')}`, actual);
+        super(`Invalid value for ${func.value} argument '${arg.name}' at position ${position + 1}. Expecting any of: ${arg.possibleValues.join(', ')}`, actual, arg.possibleValues);
     }
 }
 
 export class ftHTMLNotEnoughArgumentsError extends ftHTMLParserError {
     constructor(func: token, expecting: number, actual: number) {
-        super(`${func.value} requires ${expecting} arguments but ${actual} was given`, func);
+        super(`${func.value} requires ${expecting} arguments but ${actual} was given`, func, expecting.toString());
     }
 }
 
-export class ftHTMLImportError extends Error {
-    public position: errortokenposition;
+export class ftHTMLImportError extends FTHTMLError {
 
     constructor(message: string, token?: token, parentFile?: string) {
-        super();
-        this.name = this.constructor.name;
+        super(message, token?.position);
 
         if (parentFile && parentFile !== '')
             StackTrace.add(parentFile);
-
-        if (token) {
-            this.position = ErrorTokenPosition(token.position.line, token.position.column, token.position.column + (token.value ? token.value.length : 0));
-            StackTrace.updatePosition(0, token.position);
+        else {
+            if (!token) {
+                const item = StackTrace.get(0);
+                if (item.position !== null) {
+                    this.position = ErrorTokenPosition(item.position.line, item.position.column);
+                }
+            }
         }
-        this.message = `${message}
-    ${StackTrace.toString()}`
+
+        if (token)
+            this.position.end = token.position.column + (token.value ? token.value.length : 1);
     }
 }

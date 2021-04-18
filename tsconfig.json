@@ -2,7 +2,7 @@
     "compilerOptions": {
         "target": "ES2019",
         "module": "commonjs",
-        "sourceMap": false,
+        "sourceMap": true,
         "preserveConstEnums": true,
         "types": [
             "node"

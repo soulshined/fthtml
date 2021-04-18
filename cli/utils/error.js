@@ -5,3 +5,4 @@ function default_1(message, exit) {
     exit && process.exit(1);
 }
 exports.default = default_1;
+//# sourceMappingURL=error.js.map

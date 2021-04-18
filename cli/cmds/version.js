@@ -8,3 +8,4 @@ function default_1() {
     console.log(`ftHTML v${fthtml}\nftHTML-cli v${cli}`);
 }
 exports.default = default_1;
+//# sourceMappingURL=version.js.map
