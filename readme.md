@@ -4,9 +4,38 @@ Visit https://www.fthtml.com for more information and resources
 
 Quickly build HTML resources without the limitations of HTML
 
+__STOP DOING THIS FOR COMMON BOOTSTRAP MARKUP:__
+```html
+<button type="button" class="btn btn-primary btn-sm">Primary</button>
+<button type="button" class="btn btn-secondary btn-sm">Secondary</button>
+<button type="button" class="btn btn-success btn-sm">Success</button>
+<button type="button" class="btn btn-danger btn-sm">Danger</button>
+
+<button type="button" class="btn btn-link btn-sm">Link</button>
+```
+
+__AND DO THIS WITH FTHTML:__
+```
+//tiny templates are known as aliases
+#tinytemplates
+  btn button(type=button .btn .btn-sm)
+#end
+
+btn(.btn-primary)   "Primary"
+btn(.btn-secondary) "Secondary"
+btn(.btn-success)   "Success"
+btn(.btn-danger)    "Danger"
+
+btn(.btn-link) "Link"
+```
+
+The above ftHTML snippet produces the same HTML as above, but in a more readable, customizable, friendly-to-use, reusable and modular manner.
+
 ## Features
+* if-elif-else decision tree and control flow
+* Aliases
 * Variables and global variable support
-* Basic template and property binding
+* Template and property binding
 * Import other files natively
 * Native JSON support
 * Macros like `__DATE__`, `__NOW__`, `__JS_URI__`
@@ -15,7 +44,9 @@ Quickly build HTML resources without the limitations of HTML
 * Embedded languagues
 * Easy typing
 * Selector syntax sugar - use `#` for attribute ids and `.` for classes
+* In depth vscode extension support
 
+For a more complete HTML example -
 __Turn this:__
 ```html
 <!DOCTYPE html>
@@ -81,6 +112,25 @@ html
 ```
 > Imported files must use ftHTML syntax.
 
+You can dynamically generate content based on conditions or import scenarios but here is a brief example of how to use our #if-elif-else directives to dynamically load content based on a given expression:
+
+```
+#if @pageTitle contains "home"
+
+  h1 "Hello World"
+
+#elif @pageTitle contains "contact"
+
+  h1 "Contact Me"
+  import "./contact-form"
+
+#elif @pageTitle contains "about"
+
+  h1 "About Me"
+  import "./about"
+
+#end
+```
 
 # Installing
 

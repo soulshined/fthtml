@@ -1,7 +1,7 @@
 {
     "name": "fthtml",
     "displayName": "ftHTML",
-    "version": "3.1.0",
+    "version": "4.0.0",
     "description": "An HTML preprocesser built to cut down on special characters/tags and typing. Incorporates importing other .ftHTML files, basic variables and is not whitespace specific. Includes a CLI",
     "categories": [
         "Programming Languages",
@@ -15,7 +15,12 @@
         "variables",
         "cli",
         "template",
-        "binding"
+        "binding",
+        "control flow",
+        "directive",
+        "pragma",
+        "if",
+        "if else"
     ],
     "bin": {
         "fthtml": "cli/bin/fthtml"

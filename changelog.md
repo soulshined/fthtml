@@ -1,3 +1,29 @@
+# 4.0.0 - Heliotrope Update
+
+  For a complete overview of this update see https://fthtml.com/changelog/#Heliotrope
+
+  - New Features
+    * Pragmas
+      - #if-elif-else
+      - #ifdef
+    * Functions
+      - len
+      - str_split
+      - join
+  - Enhancements
+    * Tiny Templates
+      - Extend Attributes
+      - Placeholder Alternatives
+    * Functions
+      - str_format - date formatting support
+    * JSON
+      - 'destructoring' via dot-notation
+    * CLI
+      - Specify an fthtmlconfig path
+  - Fixes
+    * CLI
+      - extend property now extends from the originating (child) config file, instead of the cwd
+
 # 3.0.0 - Smaragdine Update
 
   For a complete overview of this update see https://fthtml.com/changelog/#Smaragdine
