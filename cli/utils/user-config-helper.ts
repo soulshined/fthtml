@@ -1,7 +1,8 @@
 import * as _ from "./frequent";
 import * as path from "path";
-import { TinyTemplate } from "../../lib/parser/models";
 import grammar from "../../lib/lexer/grammar";
+import { FTHTMLElement } from "../../lib/model/fthtmlelement";
+import { Token } from "../../lib/model/token";
 
 export interface FTHTMLConfig {
     rootDir: string,
@@ -17,7 +18,7 @@ export interface FTHTMLConfig {
     tinytemplates: {}
 }
 
-const defaults = {
+export const defaults = {
     rootDir: <string>null,
     keepTreeStructure: <boolean>false,
     extends: <string[]>[],
@@ -32,7 +33,8 @@ const defaults = {
 }
 
 function isKeyword(word: any) {
-    return grammar.macros[word] !== undefined ||
+    return word === 'this' ||
+        grammar.macros[word] !== undefined ||
         grammar.functions[word] !== undefined ||
         grammar.elangs[word] !== undefined ||
         grammar.keywords.indexOf(word) !== -1 ||
@@ -43,6 +45,7 @@ function isKeyword(word: any) {
 
 function setGlobalVars(json, configuration) {
     Object.keys(json['globalvars']).forEach(gvar => {
+        gvar = gvar.trim();
         if (isKeyword(gvar) || !_.isTypeOf(json['globalvars'][gvar], 'string'))
             return;
 
@@ -52,19 +55,19 @@ function setGlobalVars(json, configuration) {
 
 function setGlobalTinyTemplates(json, origin, configuration) {
     Object.keys(json['globalTinyTemplates']).forEach(val => {
+        val = val.trim();
         if (isKeyword(val) || !_.isTypeOf(json['globalTinyTemplates'][val], 'string'))
             return;
 
-        configuration.tinytemplates[val] = TinyTemplate({
-            // @ts-ignore
-            type: 'String',
-            value: json['globalTinyTemplates'][val]
-        }, origin)
+        configuration.tinytemplates[val] = FTHTMLElement.TinyTemplate.create(new Token(Token.TYPES.STRING,
+            json['globalTinyTemplates'][val],
+            Token.Position.create(0, 0)
+        ), origin)
     })
 }
 
-export function parseFTHTMLConfig(filepath: string): { configs: FTHTMLConfig, fileExists: boolean } {
-    let file = _.getJSONFromFile(filepath);
+export async function parseFTHTMLConfig(filepath: string): Promise<{ configs: FTHTMLConfig, fileExists: boolean }> {
+    let file = await _.getJSON(filepath);
     if (file !== null) {
         const thisconfig = Object.assign({}, defaults);
         const { json: parsed, content } = file;
@@ -73,11 +76,13 @@ export function parseFTHTMLConfig(filepath: string): { configs: FTHTMLConfig, fi
         if (parsed['extend']) {
             const exts = parsed.extend;
             for (const ext of exts) {
-                if (!_.isTypeOf(ext, 'string') || ext.startsWith("http"))
+                if (!_.isTypeOf(ext, 'string'))
                     continue;
 
-                const location = path.isAbsolute(ext) ? ext : path.resolve(path.dirname(filepath),ext);
-                const file = _.getJSONFromFile(location, ext, content, filepath);
+                const location = path.isAbsolute(ext)
+                    ? ext
+                    : ext.startsWith('http') ? ext : path.resolve(path.dirname(filepath), ext);
+                const file = await _.getJSON(location, ext, content, filepath);
                 if (file === null) continue;
                 const { json } = file;
                 thisconfig.extends.push(location);
@@ -140,10 +145,10 @@ export function parseFTHTMLConfig(filepath: string): { configs: FTHTMLConfig, fi
         }
     }
 
-    return {
+    return Promise.resolve({
         configs: defaults,
         fileExists: false
-    }
+    });
 }
 
 export function merge(config : FTHTMLConfig, fromConfig: FTHTMLConfig) {

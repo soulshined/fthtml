@@ -1,286 +1,282 @@
-import { ftHTMLInvalidCharError, ftHTMLexerError, ftHTMLInvalidTypeError } from "../utils/exceptions/index";
-import {
-    char,
-    getTokenTypeForIdentifier,
-    LEX_MODE,
-    TOKEN_TYPE as TT,
-    Token,
-    Tokenable,
-    TokenPosition,
-    TokenStream,
-} from "../lexer/types";
-import { InputStream } from "../lexer/input-stream";
-import * as _ from "../utils/functions";
-import { default as ftHTMLGrammar } from "./grammar/index";
-import { tokenposition, token } from "./token";
+import grammar, { default as ftHTMLGrammar } from "./grammar/index";
+import { Streams } from "./streams";
+import AbstractTokenStream from "./streams/token-stream";
+import { Token } from "../model/token";
+import { FTHTMLExceptions } from "../model/exceptions/fthtml-exceptions";
 
-export class ftHTMLexer {
+enum LEX_MODE {
+    ELANG = 0,
+    ELANGB,
+    NULL
+}
 
-    static TokenStream = function (input: InputStream): TokenStream {
-        let ELANG_MODE: string = null;
-        let LM = LEX_MODE.NULL;
-        let current: Tokenable = null;
-        let prev: Tokenable = null;
+export class FTHTMLLexer extends AbstractTokenStream<Token<Token.TYPES>> {
+    private ELANG_MODE: string = null;
+    private LM: LEX_MODE = LEX_MODE.NULL;
 
-        return {
-            next,
-            peek,
-            previous,
-            eof
+    constructor(input: Streams.Input) {
+        super(input);
+    }
+
+    protected tokenize(): Token<Token.TYPES> {
+        const comment = this.readThenOmit();
+        if (comment) return comment;
+
+        if (this.input.eof()) return null;
+
+        const ch = this.input.peek();
+
+        if ([LEX_MODE.ELANG].includes(this.LM)) {
+            if (ch != '{') throw new FTHTMLExceptions.Lexer(`Invalid character '${ch}', expecting a '{' for embedded language`, this.input.position());
+            return this.readElang();
         }
+        if (ftHTMLGrammar.rules.isIdentifierChar(ch)) return this.readIdentifier();
+        else if (~ftHTMLGrammar.stringSymbols.indexOf(ch)) return this.readString();
+        else if (ch == '@') return this.readVariable();
+        else if (ch == '#') return this.readMaybePragma();
+        else if (ch == '.') return this.readClassAttr();
+        else if (ftHTMLGrammar.rules.isValidSymbol(ch)) {
+            const pos = this.input.position();
+            this.input.next();
 
-        function tokenize(): Tokenable {
-            const comment = readThenOmit();
+            return new Token(Token.TYPES.SYMBOL, ch, pos);
+        }
+        else throw new FTHTMLExceptions.Lexer.InvalidChar(ch, this.input.position());
+    }
+
+    private readThenOmit(): Token<Token.TYPES> {
+        let buffer = '';
+
+        do {
+            buffer = this.readWhile(ftHTMLGrammar.rules.isWhitespace);
+            const comment = this.readComments();
             if (comment) return comment;
+        } while (!this.input.eof() && buffer.length > 0);
 
-            if (input.eof()) return null;
+        return null;
+    }
 
-            const ch = input.peek();
+    private readComments(): Token<Token.TYPES> {
+        const pos = this.input.position();
+        const peek = this.input.peek();
 
-            if (LM == LEX_MODE.ELANG) {
-                if (ch != '{') throw new ftHTMLexerError(`Invalid character '${ch}', expecting a '{' for embedded language`, input.position());
-                return readElang();
+        if (peek === '/') {
+            this.input.next();
+            const peek = this.input.peek();
+
+            if (peek === '/') return new Token(Token.TYPES.COMMENT, `/${this.readWhile(ch => ch != '\n')}`, pos);
+            else if (peek === '*') return new Token(Token.TYPES.COMMENTB, `/*${this.readBlockComment()}`, pos);
+            else throw new FTHTMLExceptions.Lexer.InvalidChar('/', pos);
+        }
+
+        return null;
+    }
+
+    private readBlockComment(): string {
+        const pos = this.input.position();
+        let buffer = '';
+        let is_valid = false;
+
+        this.input.next();
+        while (!this.input.eof()) {
+            buffer += this.input.next();
+
+            if (buffer.endsWith('*/')) {
+                is_valid = true;
+                break;
             }
-            if (ftHTMLGrammar.rules.isIdentifierChar(ch)) return readIdentifier();
-            else if (~ftHTMLGrammar.stringSymbols.indexOf(ch)) return readString();
-            else if (ch == '@') return readVariable();
-            else if (ch == '#') return readMaybePragma();
-            else if (ch == '.') return readClassAttr();
-            else if (ftHTMLGrammar.rules.isValidSymbol(ch)) {
-                const pos = input.position();
-                input.next();
+        }
 
-                return Token(TT.SYMBOL, ch, pos);
+        if (!is_valid) throw new FTHTMLExceptions.Lexer(`Block comment not properly formed or ended`, pos);
+
+        return buffer;
+    }
+
+    private readIdentifier(): Token<Token.TYPES> {
+        const pos = this.input.position();
+        const identifier = this.readWhile(ch => {
+            if (ch == '.' || ftHTMLGrammar.rules.isIdentifierChar(ch)) return true;
+            if (ch == '@') throw new FTHTMLExceptions.Lexer.InvalidChar('@', this.input.position());
+            else return false;
+        });
+
+        if (identifier.endsWith('.')) throw new FTHTMLExceptions.Lexer.InvalidChar('.', pos);
+
+        const type = Token.getTypeForIdentifier(identifier);
+        if (type === Token.TYPES.PRAGMA)
+            throw new FTHTMLExceptions.Lexer('Pragma not well-formed, required "#" prefix missing', pos);
+
+        if (type === Token.TYPES.ELANG) {
+            this.LM = LEX_MODE.ELANG;
+            this.ELANG_MODE = identifier;
+        }
+
+        return new Token(type, identifier, pos);
+    }
+
+    private readVariable(): Token<Token.TYPES> {
+        const pos = this.input.position();
+        this.input.next();
+        let t = Token.TYPES.VARIABLE;
+        let identifier = this.readWhile(ch => {
+            if (ftHTMLGrammar.rules.isWhitespace(ch) || ['}', ')', '[', '.'].includes(ch)) return false;
+            else if (ftHTMLGrammar.rules.isIdentifierChar(ch)) return true;
+            else throw new FTHTMLExceptions.Lexer.InvalidChar(ch, this.input.position());
+        })
+
+        if (['[', '.'].includes(this.input.peek())) {
+            identifier += this.readLiteralVariable();
+            t = Token.TYPES.LITERAL_VARIABLE;
+        }
+
+        if (identifier.length === 0) throw new FTHTMLExceptions.Lexer.InvalidChar('@', pos);
+
+        return new Token(t, identifier, pos);
+    }
+
+    private readLiteralVariable(): string {
+        const pos = this.input.position();
+        const ch = this.input.next();
+        let buffer = ch;
+
+        const peek = this.input.peek();
+        if (this.input.eof())
+            throw new FTHTMLExceptions.Lexer("Incomplete group", pos);
+        else if (grammar.stringSymbols.includes(peek) && ch === '[') {
+            buffer += `${peek}${this.readEscaped(this.input.next(), pos)}${peek}`;
+            if (this.input.eof())
+                throw new FTHTMLExceptions.Lexer("an indice reference must have an opening and closing bracket", pos);
+            else if (this.input.peek() === ']') {
+                buffer += this.input.next();
+                if (['[', '.'].includes(this.input.peek()))
+                    buffer += this.readLiteralVariable();
+                else if (!ftHTMLGrammar.rules.isWhitespace(this.input.peek()) && !['}', ')'].includes(this.input.peek()) && !this.input.eof())
+                    throw new FTHTMLExceptions.Lexer.InvalidChar(this.input.peek(), this.input.position());
             }
-            else throw new ftHTMLInvalidCharError(ch, input.position());
+            else throw new FTHTMLExceptions.Lexer("an indice reference must have an opening and closing bracket", pos);
         }
-
-        function readWhile(predicate: (ch: char) => boolean): string {
-            let buffer = '';
-
-            while (!input.eof() && predicate(input.peek()))
-                buffer += input.next();
-
-            return buffer;
-        }
-
-        function readEscaped(escapedBy: char, startingPos?: tokenposition) {
-            const pos = input.position();
-            let isEscaped = false;
-            let buffer = '';
-
-            while (!input.eof()) {
-                const ch = input.next();
-                if (isEscaped) {
-                    if (ch !== '\\') {
-                        buffer += `\\${ch}`;
-                        isEscaped = false;
-                    }
-                    else buffer += ch
-                }
-                else if (ch === '\\') isEscaped = true;
-                else if (ch === escapedBy) {
-                    return buffer;
-                }
-                else buffer += ch;
-            }
-
-            throw new ftHTMLexerError('String not properly formed', startingPos ?? pos);
-        }
-
-        function readThenOmit(): Tokenable {
-            let buffer = '';
-
-            do {
-                buffer = readWhile(ftHTMLGrammar.rules.isWhitespace);
-                const comment = readComments();
-                if (comment) return comment;
-            } while (!input.eof() && buffer.length > 0);
-
-            return null;
-        }
-
-        function readComments(): Tokenable {
-            const pos = input.position();
-            const peek = input.peek();
-
-            if (peek === '/') {
-                input.next();
-                const peek = input.peek();
-
-                if (peek === '/') return Token(TT.COMMENT, `/${readWhile(ch => ch != '\n')}`, pos);
-                else if (peek === '*') return Token(TT.COMMENTB, `/*${readBlockComment()}`, pos);
-                else throw new ftHTMLInvalidCharError('/', pos);
-            }
-
-            return null;
-        }
-
-        function readBlockComment(): string {
-            const pos = input.position();
-            let buffer = '';
-            let is_valid = false;
-
-            input.next();
-            while (!input.eof()) {
-                buffer += input.next();
-
-                if (buffer.endsWith('*/')) {
-                    is_valid = true;
-                    break;
-                }
-            }
-
-            if (!is_valid) throw new ftHTMLexerError(`Block comment not properly formed or ended`, pos);
-
-            return buffer;
-        }
-
-        function readIdentifier(): token {
-            const pos = input.position();
-            const identifier = readWhile(ch => {
-                if (ch == '.' || ftHTMLGrammar.rules.isIdentifierChar(ch)) return true;
-                if (ch == '@') throw new ftHTMLInvalidCharError('@', input.position());
-                else return false;
-            });
-
-            if (identifier.endsWith('.')) throw new ftHTMLInvalidCharError('.', pos);
-
-            const type = getTokenTypeForIdentifier(identifier);
-            if (type === TT.PRAGMA)
-                throw new ftHTMLexerError('Pragma not well-formed, required "#" prefix missing', pos);
-
-            if (type === TT.ELANG) {
-                LM = LEX_MODE.ELANG;
-                ELANG_MODE = identifier;
-            }
-
-            return Token(type, identifier, pos);
-        }
-
-        function readString(): token {
-            const pos = input.position();
-            const delimiter = input.next();
-            return Token(TT.STRING, readEscaped(delimiter), pos, delimiter);
-        }
-
-        function readVariable(): token {
-            const pos = input.position();
-            input.next();
-            const identifier = readWhile(ch => {
-                if (ftHTMLGrammar.rules.isWhitespace(ch) || ch == '}' || ch == ')') return false;
+        else if (ftHTMLGrammar.rules.isIdentifierChar(peek) && ch === '[') {
+            buffer += this.readWhile(ch => {
+                if (ftHTMLGrammar.rules.isWhitespace(ch) || ['}', ')', ']'].includes(ch)) return false;
                 else if (ftHTMLGrammar.rules.isIdentifierChar(ch)) return true;
-                else throw new ftHTMLInvalidCharError(ch, input.position());
+                else throw new FTHTMLExceptions.Lexer.InvalidChar(ch, this.input.position());
             })
-
-            if (identifier.length === 0) throw new ftHTMLInvalidCharError('@', pos);
-
-            return Token(TT.VARIABLE, identifier, pos);
-        }
-
-        function readElang(): token {
-            const pos = input.position();
-            input.next();
-
-            let openBraces = 1;
-            let buffer = '';
-            let stringBuffer: string;
-            let stringDelim: string;
-            let _lm = LEX_MODE.ELANG;
-            LM = null;
-
-            while (!input.eof()) {
-                const pos = input.position();
-                const ch = input.next();
-                buffer += ch;
-
-                if (_lm != LEX_MODE.ELANGB) {
-                    if (ch == '{') openBraces++;
-                    else if (ch == '}') {
-                        if (--openBraces === 0) {
-                            ELANG_MODE = null;
-                            buffer = buffer.slice(0, -1);
-                            return Token(TT.ELANGB, buffer, input.position());
-                        }
-                    }
-                    else if (~ftHTMLGrammar.elangs[ELANG_MODE].stringSymbols.indexOf(ch)) {
-                        _lm = LEX_MODE.ELANGB;
-                        stringBuffer = ch;
-                        stringDelim = ch;
-                    }
-                }
-                else {
-                    stringBuffer += ch;
-
-                    if (stringBuffer !== `${stringDelim}${stringDelim}`) {
-                        stringBuffer = readEscaped(stringDelim, TokenPosition(input.position().line, input.position().column - 1)) + stringDelim;
-                        buffer += stringBuffer;
-                    }
-                    _lm = LEX_MODE.ELANG;
-
-                }
+            if (this.input.eof())
+                throw new FTHTMLExceptions.Lexer("Incomplete group", pos);
+            else if (this.input.peek() === ']') {
+                buffer += this.input.next();
+                if (this.input.peek() === '.' || this.input.peek() === '[')
+                    buffer += this.readLiteralVariable();
+                else if (!ftHTMLGrammar.rules.isWhitespace(this.input.peek()) && !['}', ')'].includes(this.input.peek()) && !this.input.eof())
+                    throw new FTHTMLExceptions.Lexer.InvalidChar(this.input.peek(), this.input.position());
             }
-
-            throw new ftHTMLexerError("Expecting a closing '}' for embedded languauge", pos);
         }
-
-        function readMaybePragma(): token {
-            const pos = input.position();
-            input.next();
-
-            if (ftHTMLGrammar.rules.isWhitespace(input.peek()) || input.eof())
-                throw new ftHTMLInvalidCharError('#', pos);
-
-            const identifier = readWhile(ch => {
-                if (ftHTMLGrammar.rules.isWhitespace(ch) || ch == '}' || ch == ')') return false;
+        else if (ftHTMLGrammar.rules.isIdentifierChar(peek) && ch === '.') {
+            buffer += this.readWhile(ch => {
+                if (ftHTMLGrammar.rules.isWhitespace(ch) || ['}', ')', '[', '.'].includes(ch)) return false;
                 else if (ftHTMLGrammar.rules.isIdentifierChar(ch)) return true;
-                else throw new ftHTMLInvalidCharError(ch, input.position());
-            });
-
-            let type = getTokenTypeForIdentifier(identifier);
-            if (![TT.PRAGMA, TT.WORD].includes(type)) throw new ftHTMLexerError(`Invalid type '${type}' for '#'. Expected pragma, word`, pos);
-            if (type == TT.WORD) type = TT.ATTR_ID;
-
-            return Token(type, identifier, pos);
+                else throw new FTHTMLExceptions.Lexer.InvalidChar(ch, this.input.position());
+            })
+            if (['.', '['].includes(this.input.peek()))
+                buffer += this.readLiteralVariable();
+            else if (!ftHTMLGrammar.rules.isWhitespace(this.input.peek()) && !['}', ')'].includes(this.input.peek()) && !this.input.eof())
+                throw new FTHTMLExceptions.Lexer.InvalidChar(this.input.peek(), this.input.position());
         }
+        else if (ch === '[' && !ftHTMLGrammar.rules.isIdentifierChar(peek))
+            throw new FTHTMLExceptions.Lexer("an indice reference must have an opening and closing bracket", pos);
+        else if (ch === '.' && ftHTMLGrammar.rules.isWhitespace(peek))
+            throw new FTHTMLExceptions.Lexer("a dot can not be the last character in a variable", pos);
+        else if (ch === '.' && !ftHTMLGrammar.rules.isIdentifierChar(peek))
+            throw new FTHTMLExceptions.Lexer.InvalidChar(this.input.peek(), this.input.position());
 
-        function readClassAttr(): token {
-            const pos = input.position();
-            input.next();
+        return buffer;
+    }
 
-            if (ftHTMLGrammar.rules.isWhitespace(input.peek()) || input.eof())
-                throw new ftHTMLInvalidCharError('(', pos);
+    private readElang(): Token<Token.TYPES> {
+        const pos = this.input.position();
+        this.input.next();
 
-            else if (input.peek() == '@') {
-                input.next();
-                const identifier = readWhile(ftHTMLGrammar.rules.isIdentifierChar);
+        let openBraces = 1;
+        let buffer = '';
+        let stringBuffer: string;
+        let stringDelim: string;
+        let _lm = LEX_MODE.ELANG;
+        this.LM = null;
 
-                if (identifier.length === 0) throw new ftHTMLInvalidCharError('@', pos);
+        while (!this.input.eof()) {
+            const pos = this.input.position();
+            const ch = this.input.next();
+            buffer += ch;
 
-                return Token(TT.ATTR_CLASS_VAR, identifier, pos);
+            if (_lm != LEX_MODE.ELANGB) {
+                if (ch == '{') openBraces++;
+                else if (ch == '}') {
+                    if (--openBraces === 0) {
+                        this.ELANG_MODE = null;
+                        buffer = buffer.slice(0, -1);
+                        return new Token(Token.TYPES.ELANGB, buffer, this.input.position());
+                    }
+                }
+                else if (~ftHTMLGrammar.elangs[this.ELANG_MODE].stringSymbols.indexOf(ch)) {
+                    _lm = LEX_MODE.ELANGB;
+                    stringBuffer = ch;
+                    stringDelim = ch;
+                }
             }
+            else {
+                stringBuffer += ch;
 
-            return Token(TT.ATTR_CLASS, readWhile((ch) => {
-                if (ftHTMLGrammar.rules.isIdentifierChar(ch)) return true;
-                else if (ch == '.' || ch == '#') throw new ftHTMLInvalidCharError(ch, input.position());
-                else return false;
-            }), pos);
+                if (stringBuffer !== `${stringDelim}${stringDelim}`) {
+                    stringBuffer = this.readEscaped(stringDelim, Token.Position.create(this.input.position().line, this.input.position().column - 1)) + stringDelim;
+                    buffer += stringBuffer;
+                }
+                _lm = LEX_MODE.ELANG;
+
+            }
         }
 
-        function next(): Tokenable {
-            let token = current;
-            prev = current;
-            current = null;
-            return token || tokenize();
+        throw new FTHTMLExceptions.Lexer("Expecting a closing '}' for embedded languauge", pos);
+    }
+
+    private readMaybePragma(): Token<Token.TYPES> {
+        const pos = this.input.position();
+        this.input.next();
+
+        if (ftHTMLGrammar.rules.isWhitespace(this.input.peek()) || this.input.eof())
+            throw new FTHTMLExceptions.Lexer.InvalidChar('#', pos);
+
+        const identifier = this.readWhile(ch => {
+            if (ftHTMLGrammar.rules.isWhitespace(ch) || ch == '}' || ch == ')') return false;
+            else if (ftHTMLGrammar.rules.isIdentifierChar(ch)) return true;
+            else throw new FTHTMLExceptions.Lexer.InvalidChar(ch, this.input.position());
+        });
+
+        let type = Token.getTypeForIdentifier(identifier);
+        if (![Token.TYPES.PRAGMA, Token.TYPES.WORD].includes(type)) throw new FTHTMLExceptions.Lexer(`Invalid type '${type}' for '#'. Expected pragma, word`, pos);
+        if (type == Token.TYPES.WORD) type = Token.TYPES.ATTR_ID;
+
+        return new Token(type, identifier, pos);
+    }
+
+    private readClassAttr(): Token<Token.TYPES> {
+        const pos = this.input.position();
+        this.input.next();
+
+        if (ftHTMLGrammar.rules.isWhitespace(this.input.peek()) || this.input.eof())
+            throw new FTHTMLExceptions.Lexer.InvalidChar('(', pos);
+
+        else if (this.input.peek() == '@') {
+            const token = this.readVariable();
+
+            if (token.value.length === 0) throw new FTHTMLExceptions.Lexer.InvalidChar('@', pos);
+
+            return new Token(token.type === Token.TYPES.VARIABLE ? Token.TYPES.ATTR_CLASS_VAR : Token.TYPES.ATTR_CLASS_LITERAL_VAR, token.value, pos);
         }
-        function peek(): Tokenable {
-            return current || (current = tokenize());
-        }
-        function previous(): Tokenable {
-            return prev;
-        }
-        function eof(): boolean {
-            return peek() === null;
-        }
+
+        return new Token(Token.TYPES.ATTR_CLASS, this.readWhile((ch) => {
+            if (ftHTMLGrammar.rules.isIdentifierChar(ch)) return true;
+            else if (ch == '.' || ch == '#') throw new FTHTMLExceptions.Lexer.InvalidChar(ch, this.input.position());
+            else return false;
+        }), pos);
     }
 }

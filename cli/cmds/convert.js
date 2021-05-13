@@ -9,25 +9,33 @@ const user_config_1 = require("../utils/user-config");
 const glob = require("glob");
 const js_beautify_1 = require("js-beautify");
 const user_config_helper_1 = require("../utils/user-config-helper");
+const html_builder_1 = require("../../lib/model/html-builder");
 let root;
-function default_1(args) {
+let uconfig;
+async function default_1(args) {
     var _a, _b, _c;
+    uconfig = (await user_config_1.default).configs;
     if (args.c) {
         let filepath = args.c;
         if (!path.isAbsolute(filepath)) {
             filepath = path.resolve(args.c);
         }
-        const argConfig = user_config_helper_1.default(filepath);
-        if (argConfig.fileExists)
-            user_config_helper_1.merge(user_config_1.default, argConfig.configs);
+        try {
+            const argConfig = await user_config_helper_1.default(filepath);
+            if (argConfig.fileExists)
+                user_config_helper_1.merge(uconfig, argConfig.configs);
+        }
+        catch (err) {
+            error_1.default(err, true);
+        }
     }
-    user_config_1.default.isdebug = user_config_1.default.isdebug || args.debug;
-    let dest = (_a = user_config_1.default.exportDir, (_a !== null && _a !== void 0 ? _a : (_b = args.d, (_b !== null && _b !== void 0 ? _b : ''))));
-    if (user_config_1.default.isdebug)
-        console.log("fthtmlconfig =>", user_config_1.default);
+    uconfig.isdebug = uconfig.isdebug || args.debug;
+    let dest = (_a = uconfig.exportDir, (_a !== null && _a !== void 0 ? _a : (_b = args.d, (_b !== null && _b !== void 0 ? _b : ''))));
+    if (uconfig.isdebug)
+        console.log("fthtmlconfig =>", uconfig);
     try {
-        root = (_c = user_config_1.default.rootDir, (_c !== null && _c !== void 0 ? _c : path.resolve(args._[1] || './')));
-        if (!user_config_1.default.exportDir && args.d) {
+        root = (_c = uconfig.rootDir, (_c !== null && _c !== void 0 ? _c : path.resolve(args._[1] || './')));
+        if (!uconfig.exportDir && args.d) {
             dest = path.resolve(dest);
             fs.lstatSync(dest).isDirectory();
         }
@@ -45,13 +53,19 @@ function default_1(args) {
 exports.default = default_1;
 function convertFile(file, dest, args) {
     _.Timer.start();
-    fs.readFile(file, 'utf8', (err, content) => {
+    fs.readFile(file, 'utf8', async (err, content) => {
         if (err)
             throw error_1.default(err.message, true);
         const pp = path.parse(file);
-        const html = ftHTML.renderFile(path.resolve(pp.dir, pp.name));
+        let html = '';
+        try {
+            html = await ftHTML.renderFile(path.resolve(pp.dir, pp.name));
+        }
+        catch (err) {
+            error_1.default(err, true);
+        }
         if (args.t) {
-            console.log(`Writing to '${path.resolve(dest, path.basename(file, '.fthtml') + '.html')}'\n\t${html}`);
+            console.log(`Writing to '${path.resolve(dest, path.basename(file, '.fthtml') + '.html')}'\n\t${html.substring(html_builder_1.HTMLBuilder.getDisclaimer().length)}`);
         }
         else {
             writeFile(dest, `${path.basename(file, '.fthtml')}.html`, args.p == true ? beautify(html) : html);
@@ -67,14 +81,20 @@ function convertFiles(dir, dest, args) {
         if (err)
             error_1.default(err, true);
         _.Timer.start();
-        files.forEach(file => {
+        files.forEach(async (file) => {
             const pp = path.parse(file);
-            const html = ftHTML.renderFile(path.resolve(pp.dir, pp.name));
+            let html = '';
+            try {
+                html = await ftHTML.renderFile(path.resolve(pp.dir, pp.name));
+            }
+            catch (err) {
+                error_1.default(err, true);
+            }
             if (args.t) {
-                console.log(`\nWriting to '${path.resolve(getDestination(file, dest, args), path.basename(file, '.fthtml') + '.html')}'\n\t${html}`);
+                console.log(`\nWriting to '${path.resolve(getDestination(file, dest, args), path.basename(file, '.fthtml') + '.html')}'\n\t${html.substring(html_builder_1.HTMLBuilder.getDisclaimer().length)}`);
             }
             else {
-                writeFile(getDestination(file, dest, args), `${path.basename(file, '.fthtml')}.html`, args.p == true || user_config_1.default.prettify ? beautify(html) : html);
+                writeFile(getDestination(file, dest, args), `${path.basename(file, '.fthtml')}.html`, args.p == true || uconfig.prettify ? beautify(html) : html);
             }
         });
         console.log(`\nDone. Converted ${files.length} ftHTML files => ${dest == '' ? dir : dest}`);
@@ -102,11 +122,11 @@ function validateDir(dir, callback) {
     });
 }
 function getDestination(dir, dest, args) {
-    let _path = path.resolve(dest === '' ? path.dirname(dir) : dest, ((user_config_1.default.keepTreeStructure || args.k) && path.dirname(dir).startsWith(root) && path.dirname(dir) != root) ? path.relative(root, path.dirname(dir)) : '');
+    let _path = path.resolve(dest === '' ? path.dirname(dir) : dest, ((uconfig.keepTreeStructure || args.k) && path.dirname(dir).startsWith(root) && path.dirname(dir) != root) ? path.relative(root, path.dirname(dir)) : '');
     return _path;
 }
 function getExcludedPaths(args) {
-    let excluded = ['**/test/**', '**/node_modules/**', '**/.fthtml/imports/**', ...user_config_1.default.excluded];
+    let excluded = ['**/test/**', '**/node_modules/**', '**/.fthtml/imports/**', ...uconfig.excluded];
     if (args.e) {
         if (Array.isArray(args.e))
             excluded.push(...args.e);

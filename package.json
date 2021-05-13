@@ -32,8 +32,9 @@
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
     "scripts": {
+        "clean": "@powershell -Command Remove-Item ./lib,./cli,./.dev -Include *.js,*.js.map -Recurse",
         "build": "tsc",
-        "tests": "cd ../fthtml_dev && npm run tests",
+        "tests": "npm run clean && npm run build && cd ../fthtml_dev && npm run tests",
         "test:attributes": "cd ../fthtml_dev && npm run test:attributes",
         "test:comments": "cd ../fthtml_dev && npm run test:comments",
         "test:elangs": "cd ../fthtml_dev && npm run test:elangs",

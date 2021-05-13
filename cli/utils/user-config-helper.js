@@ -2,9 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const _ = require("./frequent");
 const path = require("path");
-const models_1 = require("../../lib/parser/models");
 const grammar_1 = require("../../lib/lexer/grammar");
-const defaults = {
+const fthtmlelement_1 = require("../../lib/model/fthtmlelement");
+const token_1 = require("../../lib/model/token");
+exports.defaults = {
     rootDir: null,
     keepTreeStructure: false,
     extends: [],
@@ -18,7 +19,8 @@ const defaults = {
     tinytemplates: {}
 };
 function isKeyword(word) {
-    return grammar_1.default.macros[word] !== undefined ||
+    return word === 'this' ||
+        grammar_1.default.macros[word] !== undefined ||
         grammar_1.default.functions[word] !== undefined ||
         grammar_1.default.elangs[word] !== undefined ||
         grammar_1.default.keywords.indexOf(word) !== -1 ||
@@ -28,6 +30,7 @@ function isKeyword(word) {
 }
 function setGlobalVars(json, configuration) {
     Object.keys(json['globalvars']).forEach(gvar => {
+        gvar = gvar.trim();
         if (isKeyword(gvar) || !_.isTypeOf(json['globalvars'][gvar], 'string'))
             return;
         configuration.globalvars[gvar] = json['globalvars'][gvar];
@@ -35,26 +38,26 @@ function setGlobalVars(json, configuration) {
 }
 function setGlobalTinyTemplates(json, origin, configuration) {
     Object.keys(json['globalTinyTemplates']).forEach(val => {
+        val = val.trim();
         if (isKeyword(val) || !_.isTypeOf(json['globalTinyTemplates'][val], 'string'))
             return;
-        configuration.tinytemplates[val] = models_1.TinyTemplate({
-            type: 'String',
-            value: json['globalTinyTemplates'][val]
-        }, origin);
+        configuration.tinytemplates[val] = fthtmlelement_1.FTHTMLElement.TinyTemplate.create(new token_1.Token("String", json['globalTinyTemplates'][val], token_1.Token.Position.create(0, 0)), origin);
     });
 }
-function parseFTHTMLConfig(filepath) {
-    let file = _.getJSONFromFile(filepath);
+async function parseFTHTMLConfig(filepath) {
+    let file = await _.getJSON(filepath);
     if (file !== null) {
-        const thisconfig = Object.assign({}, defaults);
+        const thisconfig = Object.assign({}, exports.defaults);
         const { json: parsed, content } = file;
         if (parsed['extend']) {
             const exts = parsed.extend;
             for (const ext of exts) {
-                if (!_.isTypeOf(ext, 'string') || ext.startsWith("http"))
+                if (!_.isTypeOf(ext, 'string'))
                     continue;
-                const location = path.isAbsolute(ext) ? ext : path.resolve(path.dirname(filepath), ext);
-                const file = _.getJSONFromFile(location, ext, content, filepath);
+                const location = path.isAbsolute(ext)
+                    ? ext
+                    : ext.startsWith('http') ? ext : path.resolve(path.dirname(filepath), ext);
+                const file = await _.getJSON(location, ext, content, filepath);
                 if (file === null)
                     continue;
                 const { json } = file;
@@ -101,10 +104,10 @@ function parseFTHTMLConfig(filepath) {
             fileExists: true
         };
     }
-    return {
-        configs: defaults,
+    return Promise.resolve({
+        configs: exports.defaults,
         fileExists: false
-    };
+    });
 }
 exports.parseFTHTMLConfig = parseFTHTMLConfig;
 function merge(config, fromConfig) {

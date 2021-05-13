@@ -1,4 +1,4 @@
 node_modules/
 .dev/
 *.js.map
-tsconfig.dev.json
+tsconfig.*.json

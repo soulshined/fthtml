@@ -81,7 +81,7 @@
       - Templates directory (`templateDir`) no longer exists for `fthtmlconfig` files
       - All templates are now handled intuitively by the `import` statement
     * Updated escaping sequence rules.
-      - `\` are now parsed as is, unless immediately infront of a string delimiter
+      - `\` are now parsed as is, unless immediately in-front of a string delimiter
   - New Features
     * Global Variables
     * Tiny Templates (and global tiny templates)
@@ -144,7 +144,7 @@
 
 
 # 2.1.5
-  - This release deprecates the 'template' keyword as it conflicts with a native html tag, preparring for future release.
+  - This release deprecates the 'template' keyword as it conflicts with a native html tag, preparing for future release.
   - Fixed issue where variables would fail in some instances as child elements
   - Removed php from supported embedded languages
 
@@ -152,7 +152,7 @@
 
 # 2.1.0 - Parser Redone & Typescript & CLI enhancements
   - Parser redone from ground up
-    - NOTE: The `+` is now deprecated. It is considered invalid markup. It was optional before, but we found users preferred not to use it anyways. Please ajust accordingly as you upgrade.
+    - NOTE: The `+` is now deprecated. It is considered invalid markup. It was optional before, but we found users preferred not to use it anyways. Please adjust accordingly as you upgrade.
     - Better lexing and parser techniques
         - Compile time is now 90% faster! A file using imports (which reads sync) before clocked in at ~100ms to compile, a file with imports now is ~10ms, depending on garbage collection and amount of content of course. Building the ftHTML website with a bunch of imports and templates and over 80 files total now only takes a whopping 103ms
     - Changes to errors and error messages

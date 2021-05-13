@@ -1,44 +1,44 @@
-import { char } from "../../../lib/lexer/types";
-import functions from "./functions";
-import macros from "./macros";
+import { TYPES } from "../types/types";
+import { FTHTMLFunction } from "../../model/functions";
+import { FTHTMLMacros } from "../../model/macros";
 
-abstract class ftHTMLangConfig {
+abstract class FTHTMLangConfig {
     static stringSymbols: string[] = [`'`, `"`];
     static pragmas: string[] = ['vars', 'tinytemplates', 'templates', 'if', 'else', 'elif', 'end', 'debug', 'ifdef'];
     static operators: string[] = ['eq', 'ne', 'ie', 'gt', 'lt', 'ge', 'le', 'contains', 'icontains', 'starts', 'ends', 'istarts', 'iends', 'match', 'imatch'];
-    static keywords: string[] = ['doctype', 'comment', 'import'];
+    static keywords: string[] = ['doctype', 'comment', 'import', 'each'];
 
-    static isWhitespace(ch: char): boolean {
+    static isWhitespace(ch: TYPES.char): boolean {
         return !!~[' ', '\r', '\n', '\t'].indexOf(ch);
     }
 
-    static isIdentifierChar(ch: char): boolean {
+    static isIdentifierChar(ch: TYPES.char): boolean {
         return /[\w-]/.test(ch);
     }
 
-    static isValidSymbol(ch: char): boolean {
+    static isValidSymbol(ch: TYPES.char): boolean {
         return !!~['{', '}', '(', ')', '='].indexOf(ch);
     }
 }
 
 export default {
-    stringSymbols: ftHTMLangConfig.stringSymbols,
-    pragmas: ftHTMLangConfig.pragmas,
-    keywords: ftHTMLangConfig.keywords,
-    operators: ftHTMLangConfig.operators,
+    stringSymbols: FTHTMLangConfig.stringSymbols,
+    pragmas: FTHTMLangConfig.pragmas,
+    keywords: FTHTMLangConfig.keywords,
+    operators: FTHTMLangConfig.operators,
     rules: {
-        isWhitespace: ftHTMLangConfig.isWhitespace,
-        isIdentifierChar: ftHTMLangConfig.isIdentifierChar,
-        isValidSymbol: ftHTMLangConfig.isValidSymbol
+        isWhitespace: FTHTMLangConfig.isWhitespace,
+        isIdentifierChar: FTHTMLangConfig.isIdentifierChar,
+        isValidSymbol: FTHTMLangConfig.isValidSymbol
     },
     elangs: {
         js: {
-            stringSymbols: [...ftHTMLangConfig.stringSymbols, '`']
+            stringSymbols: [...FTHTMLangConfig.stringSymbols, '`']
         },
         css: {
-            stringSymbols: ftHTMLangConfig.stringSymbols
+            stringSymbols: FTHTMLangConfig.stringSymbols
         }
     },
-    functions,
-    macros
+    functions: FTHTMLFunction.ALL,
+    macros: FTHTMLMacros.ALL
 } as const;

@@ -3,23 +3,29 @@ import * as path from 'path';
 import * as ftHTML from "../../lib/index";
 import { default as error } from "../utils/error";
 import * as _ from "../utils/frequent";
-import uconfig from "../utils/user-config";
+import configs from "../utils/user-config";
 import * as glob from "glob";
 import { html_beautify } from "js-beautify";
 import parseFTHTMLConfig, { merge } from "../utils/user-config-helper";
+import { HTMLBuilder } from "../../lib/model/html-builder";
 
 let root: string;
-
-export default function (args) {
+let uconfig;
+export default async function (args) {
+    uconfig = (await configs).configs;
     if (args.c) {
         let filepath = args.c;
         if (!path.isAbsolute(filepath)) {
             filepath = path.resolve(args.c);
         }
 
-        const argConfig = parseFTHTMLConfig(filepath);
-        if (argConfig.fileExists)
-            merge(uconfig, argConfig.configs);
+        try {
+            const argConfig = await parseFTHTMLConfig(filepath);
+            if (argConfig.fileExists)
+                merge(uconfig, argConfig.configs);
+        } catch (err) {
+            error(err, true);
+        }
     }
     uconfig.isdebug = uconfig.isdebug || args.debug;
     let dest = uconfig.exportDir ?? (args.d ?? '');
@@ -45,12 +51,19 @@ export default function (args) {
 
 function convertFile(file: string, dest: string, args: any) {
     _.Timer.start();
-    fs.readFile(file, 'utf8', (err, content) => {
+    fs.readFile(file, 'utf8', async (err, content) => {
         if (err) throw error(err.message, true);
         const pp = path.parse(file);
-        const html = ftHTML.renderFile(path.resolve(pp.dir, pp.name));
+        let html = '';
+        try {
+            html = await ftHTML.renderFile(path.resolve(pp.dir, pp.name));
+        }
+        catch (err) {
+            error(err, true);
+        }
+
         if (args.t) {
-            console.log(`Writing to '${path.resolve(dest, path.basename(file, '.fthtml') + '.html')}'\n\t${html}`);
+            console.log(`Writing to '${path.resolve(dest, path.basename(file, '.fthtml') + '.html')}'\n\t${html.substring(HTMLBuilder.getDisclaimer().length)}`);
         }
         else {
             writeFile(dest, `${path.basename(file, '.fthtml')}.html`, args.p == true ? beautify(html) : html);
@@ -68,11 +81,18 @@ function convertFiles(dir, dest, args) {
         if (err) error(err, true);
 
         _.Timer.start();
-        files.forEach(file => {
+        files.forEach(async file => {
             const pp = path.parse(file);
-            const html = ftHTML.renderFile(path.resolve(pp.dir, pp.name));
+            let html = '';
+            try {
+                html = await ftHTML.renderFile(path.resolve(pp.dir, pp.name));
+            }
+            catch (err) {
+                error(err, true);
+            }
+
             if (args.t) {
-                console.log(`\nWriting to '${path.resolve(getDestination(file, dest, args), path.basename(file, '.fthtml') + '.html')}'\n\t${html}`);
+                console.log(`\nWriting to '${path.resolve(getDestination(file, dest, args), path.basename(file, '.fthtml') + '.html')}'\n\t${html.substring(HTMLBuilder.getDisclaimer().length)}`);
             }
             else {
                 writeFile(getDestination(file, dest, args), `${path.basename(file, '.fthtml')}.html`, args.p == true || uconfig.prettify ? beautify(html) : html);
