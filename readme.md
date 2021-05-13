@@ -33,6 +33,7 @@ The above ftHTML snippet produces the same HTML as above, but in a more readable
 
 ## Features
 * if-elif-else decision tree and control flow
+* for-each control flow
 * Aliases
 * Variables and global variable support
 * Template and property binding
@@ -41,7 +42,7 @@ The above ftHTML snippet produces the same HTML as above, but in a more readable
 * Macros like `__DATE__`, `__NOW__`, `__JS_URI__`
 * Functions like `choose`, `html_encode`, `html_decode`, `random`, `replace`, `str_repeat`, `str_reverse`, `str_format`, `substring`, `tcase`, `trim`
 * String interpolation
-* Embedded languagues
+* Embedded Languagues
 * Easy typing
 * Selector syntax sugar - use `#` for attribute ids and `.` for classes
 * In depth vscode extension support
@@ -146,7 +147,9 @@ For those that don't know, installing globally allows you to use the module in a
 Node.js:
 ```
 const ftHTML = require('fthtml');
-ftHTML.renderFile('filename');
+ftHTML.renderFile('filename')
+      .then(html => console.log(html))
+      .catch(console.log);
 ```
 
 - `.fthtml` extn is intended to be omitted from the filename.

@@ -1,3 +1,50 @@
+# 5.0.0 - Onyx
+
+  For a complete overview of this update see https://fthtml.com/changelog/#Onyx
+
+  - New Features:
+    * Control Flow
+      - Added fundamental support for for-each loops
+
+        A very high level example of for-each loops:
+        ```
+        #vars
+          animals str_split("bear, cat, dog, pig" ", ")
+        #end
+
+        each @animals {
+          h1 @this
+        }
+        ```
+    * Functions
+
+      Due to native literal variable support, the following functions have been added to facilitate accessing data
+      - keys
+      - values
+      - sort
+      - range - lower bound inclusive, upper bound exclusive:
+  - Enhancements
+    * Native JSON Support
+      - You can now reference a json element via typical dot-notation syntax natively and anywhere a
+      regular variable can be referenced. These types of variables (dot-notation) we refer to as 'Literal Variables'
+      because they always return the literal value of what's assigned to it and doesn't get transposed in any way, in almost all cases.
+
+      - range - lower bound inclusive, upper bound exclusive:
+    - Functions
+      - join can now accept new functions like keys, values etc
+    - Interpolation
+      - Added support for piping results into function lambdas
+      ```
+      #vars
+        words str_split("The quick brown fox jumped over the lazy dog" " ")
+      #end
+
+      div "Random word is: ${ @words | capital | choose }
+      ```
+    - FTHTMLConfigs
+      - You can now extend fthtmlconfigs hosted on remote severs. Just enter the http url
+        - Main index functions are now async due to this addition
+
 # 4.0.0 - Heliotrope Update
 
   For a complete overview of this update see https://fthtml.com/changelog/#Heliotrope
