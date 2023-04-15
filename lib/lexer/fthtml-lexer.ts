@@ -119,12 +119,12 @@ export class FTHTMLLexer extends AbstractTokenStream<Token<Token.TYPES>> {
         this.input.next();
         let t = Token.TYPES.VARIABLE;
         let identifier = this.readWhile(ch => {
-            if (ftHTMLGrammar.rules.isWhitespace(ch) || ['}', ')', '[', '.'].includes(ch)) return false;
+            if (ftHTMLGrammar.rules.isWhitespace(ch) || ['}', ')', '[', '.', '?'].includes(ch)) return false;
             else if (ftHTMLGrammar.rules.isIdentifierChar(ch)) return true;
             else throw new FTHTMLExceptions.Lexer.InvalidChar(ch, this.input.position());
         })
 
-        if (['[', '.'].includes(this.input.peek())) {
+        if (['[', '.', '?'].includes(this.input.peek())) {
             identifier += this.readLiteralVariable();
             t = Token.TYPES.LITERAL_VARIABLE;
         }
@@ -171,13 +171,19 @@ export class FTHTMLLexer extends AbstractTokenStream<Token<Token.TYPES>> {
                     throw new FTHTMLExceptions.Lexer.InvalidChar(this.input.peek(), this.input.position());
             }
         }
+        else if (ch === '?') {
+            if (['.', '['].includes(this.input.peek()))
+                buffer += this.readLiteralVariable();
+            else if (this.input.peek() === '?' || !grammar.rules.isWhitespace(this.input.peek()))
+                throw new FTHTMLExceptions.Lexer.InvalidChar(this.input.next(), this.input.position());
+        }
         else if (ftHTMLGrammar.rules.isIdentifierChar(peek) && ch === '.') {
             buffer += this.readWhile(ch => {
-                if (ftHTMLGrammar.rules.isWhitespace(ch) || ['}', ')', '[', '.'].includes(ch)) return false;
+                if (ftHTMLGrammar.rules.isWhitespace(ch) || ['}', ')', '[', '.', '?'].includes(ch)) return false;
                 else if (ftHTMLGrammar.rules.isIdentifierChar(ch)) return true;
                 else throw new FTHTMLExceptions.Lexer.InvalidChar(ch, this.input.position());
             })
-            if (['.', '['].includes(this.input.peek()))
+            if (['.', '[', '?'].includes(this.input.peek()))
                 buffer += this.readLiteralVariable();
             else if (!ftHTMLGrammar.rules.isWhitespace(this.input.peek()) && !['}', ')'].includes(this.input.peek()) && !this.input.eof())
                 throw new FTHTMLExceptions.Lexer.InvalidChar(this.input.peek(), this.input.position());

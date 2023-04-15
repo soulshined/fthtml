@@ -17,6 +17,7 @@ import { Substring } from "./functions/substring";
 import { Tcase } from "./functions/tcase";
 import { Trim } from "./functions/trim";
 import { Values } from "./functions/values";
+import { Fallback } from "./functions/fallback";
 
 export namespace FTHTMLFunction {
 
@@ -41,6 +42,7 @@ export namespace FTHTMLFunction {
         substring: new Substring,
         tcase: new Tcase,
         trim: new Trim,
-        values: new Values
+        values: new Values,
+        fallback: new Fallback
     };
 }

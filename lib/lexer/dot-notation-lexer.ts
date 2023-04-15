@@ -9,7 +9,8 @@ import { FTHTMLExceptions } from "../model/exceptions/fthtml-exceptions";
 export enum DNTOKEN_TYPES {
     STRING = 'String',
     WORD = 'Word',
-    NUMBER = 'Number'
+    NUMBER = 'Number',
+    OPTIONAL = 'Optional'
 }
 
 export class DNToken extends Token<DNTOKEN_TYPES> {
@@ -47,7 +48,7 @@ export class DotNotationLexer extends AbstractTokenStream<DNToken> {
 
             const value = this.readWhile(ch => {
                 if (/\w/.test(ch)) return true;
-                else if (['.', '['].includes(ch)) return false;
+                else if (['.', '[', '?'].includes(ch)) return false;
                 else this.throwInvalidChar(ch);
             });
 
@@ -87,6 +88,10 @@ export class DotNotationLexer extends AbstractTokenStream<DNToken> {
 
             const pos = Token.Position.create(this.initiator.position.line, start.column + this.initiator.position.end - 1);
             return new DNToken(DNTOKEN_TYPES.NUMBER, value, pos);
+        }
+        else if (ch === '?') {
+            const consumed = this.input.next();
+            return new DNToken(DNTOKEN_TYPES.OPTIONAL, consumed, this.input.position());
         }
         this.throwInvalidChar(ch);
     }

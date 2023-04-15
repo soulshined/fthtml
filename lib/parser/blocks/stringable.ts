@@ -48,6 +48,7 @@ export class Stringable extends AbstractBlock {
 
     protected parseString(token: Token<Token.TYPES>): string {
         let val = token.value;
+        //non literal variable
         let matches = Utils.Regex.getAllMatches(val, new RegExp(`(\\\\)?(\\\${[ ]*@([\\w-]+)[ ]*((?:[ ]*\\|[ ]*(?:${this.allowedPipes.join("|")}))*)[ ]*})`, 'gi'));
         for (const [all, escaped, interp, e, pipes] of matches) {
             if (escaped) {
@@ -67,7 +68,8 @@ export class Stringable extends AbstractBlock {
             }
         }
 
-        matches = Utils.Regex.getAllMatches(val, new RegExp(`(\\\\)?(\\\${[ ]*@([\\w-]+)((\\\[\\d+\\\])*(?:\\.[a-zA-Z0-9][a-zA-Z0-9-_]*(?:\\\[\\d+\\\])*)+|(?:\\\[\\d+\\\])+)+((?:[ ]*\\\|[ ]*(?:${this.allowedPipes.join("|")}))*)[ ]*})`, 'gi'));
+        //literal variable
+        matches = Utils.Regex.getAllMatches(val, new RegExp(`(\\\\)?(\\\${[ ]*@([\\w-]+)((\\\[\\d+\\\])*(?:\\.[a-zA-Z0-9][a-zA-Z0-9-_]*\\??(?:\\\[\\d+\\\])*)+|(?:\\\[\\d+\\\])+)+((?:[ ]*\\\|[ ]*(?:${this.allowedPipes.join("|")}))*)[ ]*})`, 'gi'));
         for (const [all, escaped, interp, e, kvps, _, pipes] of matches) {
             if (escaped) {
                 val = val.replace(all, interp);
@@ -80,11 +82,20 @@ export class Stringable extends AbstractBlock {
             const keys = kvps.replace(/\[(\d+)\]/g, ".$1").split(".");
             keys.shift();
 
-            keys.forEach(key => {
-                if (v[key] === undefined)
+            for (let key of keys) {
+                const isOptional = key.endsWith("?");
+                if (isOptional) key = key.substring(0, key.length - 1);
+
+                if (v[key] === undefined) {
+                    if (isOptional) {
+                        v = undefined;
+                        val = val.replace(all, "");
+                        break;
+                    }
                     throw new FTHTMLExceptions.Parser.JSON(`Cannot read property '${key}' of '${all}'`, token);
+                }
                 v = v[key]
-            });
+            }
 
             if (v !== undefined) {
                 const str = val.replace(all, this.execPipes(v, pipes.split("|"), token));
